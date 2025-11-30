@@ -1,31 +1,151 @@
-<div class="project-meta">
-  <label>
-    Titel
-    <input id="metaTitle" type="text">
-  </label>
-  <label>
-    Redaktion
-    <input id="metaEditor" type="text">
-  </label>
-  <label>
-    CVD
-    <input id="metaCvd" type="text">
-  </label>
-  <label>
-    Bereich
-    <input id="metaArea" type="text">
-  </label>
-  <label>
-    Sendung
-    <input id="metaShow" type="text">
-  </label>
-  <label>
-    Format
-    <input id="metaFormat" type="text">
-  </label>
-  <label>
-    Länge (Min.)
-    <input id="metaLength" type="number" min="0">
-  </label>
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <title>Storyboard Studio – Projekt</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body id="projectPage">
+
+<div class="app-shell">
+  <div class="app project-app" id="projectRoot">
+
+    <header class="project-header">
+      <div class="header-left">
+        <div class="logo-badge">SB</div>
+        <div>
+          <div class="header-title">Storyboard Studio</div>
+          <div class="header-subtitle">Projekt bearbeiten</div>
+        </div>
+      </div>
+      <div class="header-user">
+        <button type="button" class="small" onclick="window.location.href='index.html'">
+          Zurück zum Dashboard
+        </button>
+      </div>
+    </header>
+
+    <main class="project-main">
+      <!-- Projekt-Stammdaten -->
+      <section class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Projekt-Stammdaten</div>
+            <div class="card-subtitle">
+              Titel, Redaktion, CVD, Bereich, Sendung, Format & Länge können hier jederzeit geändert werden.
+            </div>
+          </div>
+          <div class="project-header-actions">
+            <button id="btnSaveProject" class="primary small" type="button">Projekt speichern</button>
+            <button id="btnDeleteProject" class="danger small" type="button">Projekt löschen</button>
+          </div>
+        </div>
+
+        <div class="project-meta-grid">
+          <label>
+            <span class="project-meta-label">Titel / Projektname</span>
+            <input id="metaTitle" type="text" />
+          </label>
+          <label>
+            <span class="project-meta-label">Redaktion</span>
+            <input id="metaEditor" type="text" />
+          </label>
+          <label>
+            <span class="project-meta-label">CVD</span>
+            <input id="metaCvd" type="text" />
+          </label>
+          <label>
+            <span class="project-meta-label">Bereich</span>
+            <input id="metaArea" type="text" />
+          </label>
+          <label>
+            <span class="project-meta-label">Sendung</span>
+            <input id="metaShow" type="text" />
+          </label>
+          <label>
+            <span class="project-meta-label">Format</span>
+            <input id="metaFormat" type="text" />
+          </label>
+          <label>
+            <span class="project-meta-label">Länge (Min.)</span>
+            <input id="metaLength" type="number" min="0" />
+          </label>
+        </div>
+      </section>
+
+      <!-- Spaltenwahl & Tools -->
+      <section class="card">
+        <div class="card-header">
+          <div class="card-title">Drehbuch & Takes</div>
+          <div class="card-subtitle">
+            Zeilen sind Takes, die Spalten kannst du ein- oder ausblenden. Bilder pro Take: bis zu 4 Thumbnails.
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <div class="column-toggle-bar">
+              Sichtbare Spalten:
+              <label><input type="checkbox" data-col-toggle="take" checked> Take</label>
+              <label><input type="checkbox" data-col-toggle="in" checked> In</label>
+              <label><input type="checkbox" data-col-toggle="out" checked> Out</label>
+              <label><input type="checkbox" data-col-toggle="persons" checked> Personen</label>
+              <label><input type="checkbox" data-col-toggle="picture" checked> Bild/Kamera</label>
+              <label><input type="checkbox" data-col-toggle="voice" checked> Sprechertext</label>
+              <label><input type="checkbox" data-col-toggle="notes" checked> Notizen</label>
+              <label><input type="checkbox" data-col-toggle="music" checked> Musik</label>
+              <label><input type="checkbox" data-col-toggle="source" checked> Herkunft</label>
+              <label><input type="checkbox" data-col-toggle="images" checked> Bilder</label>
+            </div>
+          </div>
+          <div class="toolbar-right">
+            <button id="btnRecalcTimecodes" class="small" type="button">
+              Timecodes neu berechnen
+            </button>
+          </div>
+        </div>
+
+        <table id="takesTable" class="takes-table">
+          <thead>
+          <tr>
+            <th data-col="take">Take</th>
+            <th data-col="in">In</th>
+            <th data-col="out">Out</th>
+            <th data-col="persons">Personen</th>
+            <th data-col="picture">Bild/Kamera</th>
+            <th data-col="voice">Sprechertext</th>
+            <th data-col="notes">Notizen</th>
+            <th data-col="music">Musik</th>
+            <th data-col="source">Herkunft</th>
+            <th data-col="images">Bilder</th>
+          </tr>
+          </thead>
+          <tbody id="takesBody">
+          <!-- wird per JS gefüllt -->
+          </tbody>
+        </table>
+
+        <div class="muted" style="margin-top:0.4rem;">
+          Hinweis: Dieses Grundgerüst arbeitet mit dem aktuell ausgewählten Projekt
+          aus <code>localStorage["sb_active_project"]</code>. Die DOCX-Import-Logik
+          können wir gezielt im nächsten Schritt auf dein Drehbuch-Layout anpassen.
+        </div>
+      </section>
+
+      <!-- Allgemeine Notizen -->
+      <section class="card">
+        <div class="card-header">
+          <div class="card-title">Allgemeine Projekt-Notizen</div>
+        </div>
+        <textarea id="projectNotes" rows="4"
+                  placeholder="Allgemeine Hinweise, besondere Anforderungen, Ansprechpartner …"></textarea>
+      </section>
+
+    </main>
+  </div>
 </div>
-<button id="btnSaveProject" class="primary small">Projekt speichern</button>
+
+<script src="app.js"></script>
+</body>
+</html>
