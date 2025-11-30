@@ -2,1926 +2,1114 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <title>Storyboard Studio – Drehbuch & Storyboard</title>
+  <title>Storyboard Studio</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <style>
     * { box-sizing: border-box; }
+    :root {
+      --bg-body: #f3f4f6;
+      --bg-card: #ffffff;
+      --bg-soft: #f9fafb;
+      --border-subtle: #e5e7eb;
+      --border-strong: #d1d5db;
+      --text-main: #111827;
+      --text-muted: #6b7280;
+      --accent: #f97316;
+      --accent-dark: #ea580c;
+      --radius-lg: 1.2rem;
+      --radius-md: 0.9rem;
+      --radius-pill: 999px;
+    }
     body {
       margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: radial-gradient(circle at top, #0f172a, #020617 70%);
-      color: #e5e7eb;
+      background: var(--bg-body);
+      color: var(--text-main);
       min-height: 100vh;
     }
 
-    button {
-      border-radius: 999px;
-      border: 1px solid #475569;
-      background: #1e293b;
-      color: #e2e8f0;
-      padding: 0.4rem 0.9rem;
-      cursor: pointer;
-      font-size: 0.8rem;
-      transition: 0.15s;
-      white-space: nowrap;
-    }
-    button.primary {
-      background: linear-gradient(135deg, #2563eb, #1d4ed8);
-      border-color: #1d4ed8;
-    }
-    button.small {
-      padding: 0.25rem 0.6rem;
-      font-size: 0.75rem;
-    }
-    button:hover {
-      opacity: 0.9;
-      transform: translateY(-0.5px);
-    }
-
-    input, select, textarea {
-      width: 100%;
-      padding: 0.4rem 0.5rem;
-      border-radius: 0.7rem;
-      border: 1px solid #334155;
-      background: #020617;
-      color: #e2e8f0;
-      font-size: 0.8rem;
-    }
-    textarea { resize: vertical; min-height: 60px; }
-
-    /* LOGIN-SCREEN – Orange, Kacheln */
-    .login-screen {
-      position: fixed;
-      inset: 0;
+    /* App-Rahmen mit Grau→Orange-Verlauf */
+    .app-shell {
+      min-height: 100vh;
       display: flex;
-      align-items: center;
+      align-items: stretch;
       justify-content: center;
-      padding: 2rem;
-      background: radial-gradient(circle at top, #fed7aa, #fb923c 30%, #7c2d12 65%, #020617 100%);
-      z-index: 10;
+      padding: 0.75rem;
     }
-
-    .login-card {
-      width: 100%;
-      max-width: 480px;
-      background: rgba(15,23,42,0.96);
-      padding: 2rem;
-      border-radius: 1.4rem;
-      border: 1px solid rgba(255,255,255,0.15);
-      backdrop-filter: blur(8px);
-      box-shadow: 0 30px 80px rgba(0,0,0,0.6);
-    }
-
-    .login-title {
-      font-size: 2rem;
-      font-weight: 800;
-      margin-bottom: 0.4rem;
-      letter-spacing: 0.02em;
-    }
-
-    .login-highlight { color: #fed7aa; }
-    .login-subtitle { font-size: 0.9rem; color: #e5e7eb; margin-bottom: 1rem; }
-
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      padding: 0.25rem 0.7rem;
-      border-radius: 999px;
-      font-size: 0.7rem;
-      background: rgba(251,146,60,0.15);
-      border: 1px solid rgba(248,250,252,0.1);
-      color: #fed7aa;
-      margin-bottom: 0.8rem;
-    }
-
-    .login-grid {
-      display: grid;
-      grid-template-columns: 1.3fr 1fr;
-      gap: 1rem;
-    }
-    @media (max-width: 640px) {
-      .login-grid { grid-template-columns: 1fr; }
-    }
-
-    .login-banner {
-      font-size: 0.8rem;
-      background: rgba(15,23,42,0.95);
-      border-radius: 1rem;
-      border: 1px solid #1f2937;
-      padding: 0.7rem 0.8rem;
-      margin-bottom: 0.8rem;
-    }
-
-    .login-links {
-      margin-top: 1rem;
-      font-size: 0.75rem;
-      color: #9ca3af;
+    .app {
+      flex: 1;
+      max-width: 1400px;
       display: flex;
-      flex-wrap: wrap;
-      gap: 0.6rem;
+      flex-direction: column;
+      border-radius: var(--radius-lg);
+      border: 2px solid transparent;
+      background-image:
+        linear-gradient(var(--bg-card), var(--bg-card)),
+        linear-gradient(135deg, #9ca3af, var(--accent));
+      background-origin: border-box;
+      background-clip: padding-box, border-box;
+      overflow: hidden;
     }
-    .login-link-pill {
-      padding: 0.25rem 0.6rem;
-      border-radius: 999px;
-      border: 1px solid #374151;
-      background: #020617;
-      cursor: default;
-    }
-
-    .app { display: none; flex-direction: column; min-height: 100vh; }
 
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: #020617;
-      border-bottom: 1px solid #1f2937;
-      padding: 0.6rem 1rem;
+      padding: 0.7rem 1.2rem;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .logo-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 0.9rem;
+      background: radial-gradient(circle at 20% 20%, #fed7aa, #f97316 50%, #ea580c 80%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.9rem;
+      box-shadow: 0 8px 20px rgba(249,115,22,0.45);
+    }
+    .header-logo-img {
+      height: 28px;
+      max-width: 220px;
+      object-fit: contain;
+      margin-left: 0.4rem;
+    }
+    .header-title {
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    .header-subtitle {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+    .header-user {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .header-user span.name {
+      color: var(--text-main);
+      font-weight: 500;
     }
 
-    main {
-      flex: 1; display: flex; min-height: 0;
+    .main-layout {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+      background: var(--bg-soft);
     }
-
-    aside {
-      width: 270px;
-      padding: 0.75rem;
-      border-right: 1px solid #1f2937;
-      background: rgba(2,6,23,0.98);
+    .sidebar {
+      width: 260px;
+      border-right: 1px solid var(--border-subtle);
+      background: var(--bg-soft);
+      padding: 0.9rem;
       display: flex;
       flex-direction: column;
       gap: 0.8rem;
     }
-
     .content {
       flex: 1;
-      padding: 0.75rem 1rem;
+      padding: 0.9rem 1.2rem 1.2rem;
       display: flex;
       flex-direction: column;
-      gap: 0.75rem;
       min-width: 0;
+      gap: 0.8rem;
+      background: var(--bg-card);
     }
 
-    .scroll-wrapper {
-      flex: 1;
+    .card {
+      background: var(--bg-card);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      padding: 0.75rem 0.9rem;
+      box-shadow: 0 8px 20px rgba(15,23,42,0.03);
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.4rem;
+    }
+    .card-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .card-subtitle {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .muted {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+
+    button {
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border-strong);
+      background: #ffffff;
+      color: var(--text-main);
+      padding: 0.38rem 0.9rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.1s ease, opacity 0.15s ease;
+      white-space: nowrap;
+    }
+    button.primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      border-color: var(--accent-dark);
+      color: #ffffff;
+      box-shadow: 0 10px 24px rgba(234,88,12,0.35);
+    }
+    button.ghost {
+      background: transparent;
+      border-color: transparent;
+      color: var(--text-muted);
+    }
+    button.small {
+      padding: 0.25rem 0.6rem;
+      font-size: 0.75rem;
+    }
+    button.full {
+      width: 100%;
+      justify-content: center;
+    }
+    button:hover {
+      opacity: 0.94;
+      transform: translateY(-0.5px);
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 0.4rem 0.55rem;
+      border-radius: 0.9rem;
+      border: 1px solid var(--border-strong);
+      background: #ffffff;
+      color: var(--text-main);
+      font-size: 0.8rem;
+      font-family: inherit;
+    }
+    .input-accent {
+      border-radius: 1.6rem;
+      border: 1px solid transparent;
+      background-image:
+        linear-gradient(#fff, #fff),
+        linear-gradient(135deg, #d1d5db, var(--accent));
+      background-origin: border-box;
+      background-clip: padding-box, border-box;
+    }
+    input::placeholder, textarea::placeholder {
+      color: #9ca3af;
+    }
+    textarea {
+      resize: vertical;
+      min-height: 60px;
+    }
+    label {
+      font-size: 0.8rem;
+      display: block;
+      margin-bottom: 0.2rem;
+      color: var(--text-main);
+    }
+    .field {
+      margin-bottom: 0.55rem;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.15rem 0.55rem;
+      border-radius: var(--radius-pill);
+      border: 1px solid var(--border-subtle);
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      background: var(--bg-soft);
+    }
+
+    /* Login Overlay */
+    .login-overlay {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.8rem 1rem;
+      background: radial-gradient(circle at top, #fed7aa, #fb923c 40%, #f3f4f6 90%);
+      z-index: 50;
+    }
+    .login-card {
+      width: 100%;
+      max-width: 480px;
+      background: #ffffff;
+      border-radius: 1.3rem;
+      border: 1px solid rgba(148,163,184,0.6);
+      box-shadow: 0 24px 70px rgba(15,23,42,0.4);
+      padding: 1.8rem 1.7rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+    .login-header {
+      display: flex;
+      gap: 0.7rem;
+      align-items: center;
+    }
+    .login-title {
+      font-size: 1.15rem;
+      font-weight: 600;
+    }
+    .login-highlight {
+      color: var(--accent-dark);
+    }
+    .login-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .login-tabs {
+      display: inline-flex;
+      padding: 0.15rem;
+      border-radius: var(--radius-pill);
+      background: var(--bg-soft);
+      border: 1px solid var(--border-subtle);
+      font-size: 0.78rem;
+      align-self: flex-start;
+      margin-top: 0.3rem;
+    }
+    .login-tab {
+      border-radius: var(--radius-pill);
+      padding: 0.25rem 0.7rem;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+    .login-tab.active {
+      background: #ffffff;
+      color: var(--accent-dark);
+      box-shadow: 0 6px 16px rgba(15,23,42,0.12);
+    }
+    .login-banner {
+      margin-top: 0.4rem;
+      padding: 0.55rem 0.6rem;
+      border-radius: 0.85rem;
+      border: 1px dashed #fed7aa;
+      background: #fff7ed;
+      font-size: 0.75rem;
+      color: #92400e;
+    }
+    .login-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 0.4rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Dashboard */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.9rem;
+      margin-top: 0.4rem;
+    }
+    .hub-tile {
+      border-radius: 1rem;
+      border: 1px solid var(--border-subtle);
+      background: #ffffff;
+      padding: 0.9rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 0.6rem;
+      box-shadow: 0 10px 26px rgba(15,23,42,0.06);
+    }
+    .hub-tile-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+    .hub-tile-text {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .badge {
+      border-radius: var(--radius-pill);
+      padding: 0.1rem 0.5rem;
+      font-size: 0.7rem;
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    .projects-list {
+      list-style: none;
+      padding: 0;
+      margin: 0.3rem 0 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      max-height: 260px;
+      overflow-y: auto;
+    }
+    .projects-list-item {
+      padding: 0.4rem 0.5rem;
       border-radius: 0.6rem;
-      overflow: auto;
-      background: #020617;
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      background: #ffffff;
+      cursor: pointer;
+    }
+    .projects-list-item:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(249,115,22,0.25);
     }
 
     .section-title {
-      font-size: 0.8rem;
+      font-size: 0.85rem;
       font-weight: 600;
-      margin-bottom: 0.1rem;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      color: #9ca3af;
+      margin-bottom: 0.3rem;
     }
 
-    .mono { font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-
-    /* Storyboard Größen */
-    .storyboard-thumb img {
-      width: 240px;
-      height: 135px;
-      object-fit: cover;
-      border-radius: 4px;
-      display: block;
-    }
-    .table-storyboard-thumb img {
-      width: 80px;
-      height: 45px;
-      object-fit: cover;
-      border-radius: 4px;
-      display: block;
-    }
-    #storyboardPreview {
-      max-width: 400px;
-      max-height: 225px; /* 16:9 klein */
-      object-fit: contain;
-      display:block;
+    .two-column {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.6rem 1rem;
     }
 
-    /* Vollbild Overlay */
-    .image-overlay {
-      position:fixed;
-      inset:0;
-      display:none;
-      align-items:center;
-      justify-content:center;
-      z-index:50;
-    }
-    .image-overlay.visible { display:flex; }
-    .image-overlay-backdrop {
-      position:absolute;
-      inset:0;
-      background:rgba(0,0,0,0.75);
-    }
-    .image-overlay-content {
-      position:relative;
-      max-width:95vw;
-      max-height:95vh;
-      z-index:51;
-    }
-    .image-overlay-content img {
-      max-width:95vw;
-      max-height:95vh;
-      border-radius:0.5rem;
-      display:block;
-    }
+    .hidden { display: none !important; }
 
-    /* Sprecher / Regie */
-    .speech-list { padding:0.6rem; display:flex; flex-direction:column; gap:0.5rem; }
-    .speech-row { display:flex; gap:0.6rem; padding-bottom:0.5rem; border-bottom:1px dashed #1f2937; }
-    .speech-time { min-width:130px; font-size:0.75rem; color:#9ca3af; }
-    .speech-text { flex:1; }
-    .speech-bubble {
-      background:#020617; border:1px solid #1f2937;
-      border-radius:0.5rem; padding:0.5rem;
-    }
-
-    .regie-list { padding:0.6rem; display:flex; flex-direction:column; gap:0.5rem; }
-    .regie-row { display:flex; gap:0.6rem; padding-bottom:0.5rem; border-bottom:1px dashed #1f2937; }
-    .regie-time { min-width:130px; color:#9ca3af; font-size:0.75rem; }
-    .regie-visual { flex:1.2; }
-    .regie-dialogue { flex:1; }
-
-    /* kleine Kacheln */
-    .tile {
-      border-radius: 1rem;
-      background: linear-gradient(145deg, rgba(248,250,252,0.02), rgba(15,23,42,0.9));
-      border: 1px solid rgba(248,250,252,0.06);
-      padding: 0.6rem 0.7rem;
-      font-size: 0.78rem;
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-
-    .drag-handle {
-      cursor: grab;
-      opacity: 0.8;
-    }
-    tr.drag-over {
-      outline: 1px dashed #f97316;
-      outline-offset: -2px;
-      background: rgba(248,250,252,0.02);
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .content { padding-inline: 0.8rem; }
+      .app { border-radius: 0; }
     }
   </style>
 </head>
-
 <body>
+<!-- TESTMARKER: VERSION ORANGE-RAND API v0.2 -->
 
-  <!-- LOGIN -->
-  <div id="loginScreen" class="login-screen">
-    <div class="login-card">
-      <div class="pill">
-        Storyboard-Studio • Beta
-      </div>
-      <div class="login-title">
-        Storyboard <span class="login-highlight">Studio</span>
-      </div>
-      <div class="login-subtitle">
-        Login & Registrierung mit Backend.<br>
-        E-Mail (oder <strong>admin</strong>) als Benutzername.
-      </div>
-
-      <div class="login-banner">
-        <strong>Info-Zeile (Admin konfigurierbar):</strong><br>
-        Hier kannst du später im Admin-Bereich Hinweise, Wartungen oder Projektinfos einblenden.
-      </div>
-
-      <div class="login-grid">
-        <div>
-          <label for="loginEmail">E-Mail / Admin-Name</label>
-          <input id="loginEmail" type="text" placeholder="z. B. stefan@weicheltfilm.de oder admin" />
-
-          <label for="loginPassword" style="margin-top:0.6rem;">Passwort</label>
-          <input id="loginPassword" type="password" placeholder="Mind. 4 Zeichen (Admin: redcat)" />
-
-          <div style="display:flex; gap:0.5rem; margin-top:1rem;">
-            <button id="loginBtn" class="primary" style="flex:1;">
-              Anmelden
-            </button>
-            <button id="registerBtn" style="flex:1;">
-              Registrieren
-            </button>
-          </div>
-
-          <div id="loginStatus" style="color:#fecaca; margin-top:0.6rem; min-height:1rem; font-size:0.8rem;"></div>
+<!-- LOGIN -->
+<div id="loginOverlay" class="login-overlay">
+  <div class="login-card">
+    <div class="login-header">
+      <div class="logo-badge">SB</div>
+      <div>
+        <div class="login-title">
+          Storyboard <span class="login-highlight">Studio</span>
         </div>
-
-        <div>
-          <div class="tile">
-            <div style="font-weight:600;">Was hier später kommt</div>
-            <div>- Projekte als Karten: „Neues Projekt“, „Projekte öffnen“, „Projekte teilen“</div>
-            <div>- Admin-Banner und Hinweise steuerbar</div>
-            <div>- Mehrstufige Freigaben, 2FA etc.</div>
-          </div>
+        <div class="login-subtitle">
+          Melde dich an oder registriere dich, um Projekte und Storyboards zu verwalten.
         </div>
-      </div>
-
-      <div class="login-links">
-        <div class="login-link-pill">Impressum</div>
-        <div class="login-link-pill">Datenschutz</div>
-        <div class="login-link-pill">Fragen & Antworten</div>
       </div>
     </div>
+
+    <div class="login-tabs">
+      <button id="tabLogin" class="login-tab active" type="button">Anmelden</button>
+      <button id="tabRegister" class="login-tab" type="button">Registrieren</button>
+    </div>
+
+    <div id="loginForm">
+      <div class="field">
+        <label for="loginEmail">E-Mail oder "admin"</label>
+        <input id="loginEmail" class="input-accent" type="text" placeholder="admin@stefanweichelt.de">
+      </div>
+      <div class="field">
+        <label for="loginPassword">Passwort</label>
+        <input id="loginPassword" class="input-accent" type="password" placeholder="Passwort">
+      </div>
+      <button id="loginButton" class="primary full" type="button">Anmelden</button>
+    </div>
+
+    <div id="registerForm" class="hidden">
+      <div class="field">
+        <label for="regName">Name</label>
+        <input id="regName" class="input-accent" type="text" placeholder="Vollständiger Name">
+      </div>
+      <div class="field">
+        <label for="regEmail">E-Mail</label>
+        <input id="regEmail" class="input-accent" type="email" placeholder="du@example.com">
+      </div>
+      <div class="field">
+        <label for="regPassword">Passwort</label>
+        <input id="regPassword" class="input-accent" type="password" placeholder="Mindestens 6 Zeichen">
+      </div>
+      <button id="registerButton" class="primary full" type="button">Registrieren</button>
+    </div>
+
+    <div class="login-banner">
+      Admin für Tests: <strong>admin@stefanweichelt.de</strong> oder <strong>admin</strong> /
+      Passwort <strong>redcat</strong>.
+      Registrierung legt normale Benutzerkonten an, die nur ihre eigenen Projekte sehen.
+    </div>
+
+    <div class="login-footer">
+      <span id="loginMessage"></span>
+      <span class="muted">Version 0.2 – Login & Projektbasis (API)</span>
+    </div>
   </div>
+</div>
 
-  <!-- APP -->
-  <div id="appRoot" class="app">
-
+<!-- APP -->
+<div class="app-shell">
+  <div class="app hidden" id="app">
     <header>
-      <h1 style="margin:0; font-size:1rem;">Storyboard Studio</h1>
-      <div>
-        <span id="userLabel" style="margin-right:0.6rem; font-size:0.8rem;"></span>
-        <button id="logoutBtn" class="small">Logout</button>
+      <div class="header-left">
+        <div class="logo-badge">SB</div>
+        <img id="headerLogo" class="header-logo-img hidden" alt="Logo">
+        <div>
+          <div class="header-title">Storyboard Studio</div>
+          <div class="header-subtitle" id="headerSubtitle">
+            Dashboard
+          </div>
+        </div>
+      </div>
+      <div class="header-user">
+        Eingeloggt als <span class="name" id="headerUserName"></span>
+        <button id="logoutButton" class="small" type="button">Abmelden</button>
       </div>
     </header>
 
-    <main>
-
-      <!-- SIDEBAR -->
-      <aside>
-        <!-- Projekt -->
-        <div>
-          <div class="section-title">Projekt</div>
-          <select id="projectSelect"></select>
-          <div style="margin-top:0.3rem;">
-            <button id="addProjectBtn" class="small primary">Neues Projekt</button>
-          </div>
-          <div id="projectHint" style="margin-top:0.3rem; font-size:0.75rem; color:#9ca3af;"></div>
-        </div>
-
-        <!-- Szene -->
-        <div>
-          <div class="section-title">Szene / Film</div>
-          <select id="sceneSelect"></select>
-          <div style="margin-top:0.3rem;">
-            <button id="addSceneBtn" class="small">Neue Szene</button>
+    <div class="main-layout">
+      <aside class="sidebar">
+        <div class="card">
+          <div class="card-title">Aktuelles Projekt</div>
+          <div class="muted" id="sidebarProjectInfo">
+            Noch kein Projekt ausgewählt.
           </div>
         </div>
 
-        <!-- DOCX-Import -->
-        <div>
-          <div class="section-title">DOCX-Import</div>
-          <input type="file" id="docxFile" accept=".doc,.docx" />
-          <div style="margin-top:0.3rem;">
-            <button id="importDocxBtn" class="small">Drehbuch aus DOCX</button>
-          </div>
-          <div id="docxHint" style="margin-top:0.3rem; font-size:0.75rem; color:#9ca3af;">
-            Erkennt Überschriften (Film 1, Film 2 …) und Tabellen mit Bildbeschreibung/Sprecher.
-          </div>
-        </div>
-
-        <!-- Personen-Datenbank -->
-        <div>
-          <div class="section-title">Personen (Projekt)</div>
-          <input id="personName" placeholder="Name" />
-          <input id="personRole" placeholder="Rolle (z. B. Moderatorin)" style="margin-top:0.3rem;" />
-          <input id="personNotes" placeholder="Notiz (Stimme, Besonderheiten …)" style="margin-top:0.3rem;" />
-          <div style="margin-top:0.3rem;">
-            <button id="addPersonBtn" class="small">Person hinzufügen</button>
-          </div>
-          <div id="personList" style="margin-top:0.3rem; font-size:0.8rem;"></div>
-        </div>
-
-        <!-- Tabellenansicht-Filter -->
-        <div>
-          <div class="section-title">Tabellenansicht</div>
-          <div style="display:flex; flex-wrap:wrap; gap:0.3rem; margin-top:0.2rem; font-size:0.75rem;">
-            <label><input type="checkbox" id="togglePersons" checked /> Personen</label>
-            <label><input type="checkbox" id="toggleVisual" checked /> Bild/Kamera</label>
-            <label><input type="checkbox" id="toggleDialogue" checked /> Sprecher</label>
-            <label><input type="checkbox" id="toggleNotes" checked /> Notizen</label>
-            <label><input type="checkbox" id="toggleMusic" checked /> Musik</label>
-            <label><input type="checkbox" id="toggleOrigin" checked /> Herkunft</label>
-            <label><input type="checkbox" id="toggleStoryboard" checked /> Storyboard</label>
-          </div>
+        <div class="card">
+          <div class="card-title">Projekte</div>
+          <div class="card-subtitle">Schnellzugriff auf deine Projekte.</div>
+          <ul id="sidebarProjects" class="projects-list"></ul>
         </div>
       </aside>
 
-      <!-- CONTENT -->
-      <section class="content">
-
-        <!-- TAKE-EDITOR (sticky) -->
-        <div class="card"
-             style="padding:0.75rem; border-radius:0.9rem;
-                    background:linear-gradient(135deg,#0f172a,#020617);
-                    border:1px solid #1f2937; margin-bottom:0.6rem;
-                    position:sticky; top:0; z-index:2;">
-          <div class="section-title">Take / Szene bearbeiten</div>
-
-          <!-- Projekt-Metadaten (grob) -->
-          <div style="display:flex; gap:0.5rem; margin-top:0.2rem; font-size:0.75rem;">
-            <div style="flex:1;">
-              <label for="projectEditor">Redakteur/in</label>
-              <input id="projectEditor" placeholder="Name" />
-            </div>
-            <div style="flex:1;">
-              <label for="projectCvd">CvD</label>
-              <input id="projectCvd" placeholder="Chef vom Dienst" />
-            </div>
-          </div>
-          <div style="display:flex; gap:0.5rem; margin-top:0.3rem; font-size:0.75rem;">
-            <div style="flex:1;">
-              <label for="projectArea">Bereich (z. B. Naturwissenschaft)</label>
-              <input id="projectArea" placeholder="Bereich / Fach" />
-            </div>
-            <div style="flex:1;">
-              <label for="projectShow">Sendung / Format</label>
-              <input id="projectShow" placeholder="z. B. Galileo, taff …" />
-            </div>
-          </div>
-
-          <!-- Zeile 1: Take / Timecodes / Stille -->
-          <div style="display:flex; gap:0.5rem; margin-top:0.6rem;">
-            <div style="flex:0 0 70px;">
-              <label for="takeNumber">Take</label>
-              <input id="takeNumber" placeholder="1" />
-            </div>
-            <div style="flex:0 0 110px;">
-              <label for="timeIn">In</label>
-              <input id="timeIn" class="mono" placeholder="00:00:00:00" />
-            </div>
-            <div style="flex:0 0 110px;">
-              <label for="timeOut">Out (auto)</label>
-              <input id="timeOut" class="mono" placeholder="auto" readonly />
-            </div>
-            <div style="flex:0 0 90px;">
-              <label for="silenceSeconds">Stille (s)</label>
-              <input id="silenceSeconds" type="number" step="0.1" min="0" value="0" />
-            </div>
-          </div>
-
-          <!-- Zeile 2: Bild links / Sprecher rechts -->
-          <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
-            <div style="flex:1;">
-              <label for="visual">Bildinhalt / Kamera</label>
-              <textarea id="visual"></textarea>
-            </div>
-            <div style="flex:1;">
-              <label for="dialogue">Sprechertext / Dialog</label>
-              <textarea id="dialogue"></textarea>
-            </div>
-          </div>
-
-          <!-- Zeile 3: Notizen / Personen -->
-          <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
-            <div style="flex:1;">
-              <label for="notes">Notizen (Regie, Technik, KI-Prompt)</label>
-              <textarea id="notes"></textarea>
-            </div>
-            <div style="flex:1;">
-              <label>Personen (aus Projekt)</label>
-              <div id="takePersonsContainer"
-                   style="border:1px solid #1f2937; border-radius:0.7rem;
-                          padding:0.3rem; max-height:110px; overflow:auto;
-                          font-size:0.8rem;"></div>
-            </div>
-          </div>
-
-          <!-- Zeile 4: Musik / Herkunft -->
-          <div style="display:flex; gap:0.5rem; margin-top:0.5rem;">
-            <div style="flex:1;">
-              <label for="music">Musik (Titel, Komponist, Library …)</label>
-              <input id="music" placeholder="z. B. Library-Track, Eigenkomposition …" />
-            </div>
-            <div style="flex:1;">
-              <label for="origin">Herkunftsnachweis (Bild/Footage)</label>
-              <input id="origin" placeholder="z. B. Agentur, exklusiv/nicht exklusiv, interne ID …" />
-            </div>
-          </div>
-
-          <!-- Zeile 5: Storyboard-Bild -->
-          <div style="display:flex; gap:0.5rem; margin-top:0.5rem; align-items:flex-start;">
-            <div style="flex:1;">
-              <label for="storyboardUrl">Storyboard-Bild (URL oder Upload)</label>
-              <input id="storyboardUrl" placeholder="https://… oder leer" />
-              <div style="margin-top:0.3rem;">
-                <img id="storyboardPreview" src="" alt="Storyboard Vorschau" style="display:none; cursor:pointer;">
+      <main class="content">
+        <!-- DASHBOARD -->
+        <section id="viewDashboard">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Projekt-Übersicht</div>
+                <div class="card-subtitle">
+                  Wähle, womit du starten willst: neues Projekt, bestehendes Projekt oder Team & Branding.
+                </div>
               </div>
+              <span class="pill" id="projectCountBadge">0 Projekte</span>
             </div>
-            <div style="flex:0 0 160px;">
-              <label for="storyboardFile">Bild-Datei</label>
-              <input id="storyboardFile" type="file" accept="image/*" />
-              <div style="font-size:0.75rem; color:#9ca3af; margin-top:0.3rem;">
-                Aktuell lokal als Data-URL – Server-Upload & 1920×1080-Resize kommen im nächsten Schritt.
+
+            <div class="dashboard-grid">
+              <article class="hub-tile">
+                <div>
+                  <div class="hub-tile-title">Neues Projekt anlegen</div>
+                  <div class="hub-tile-text">
+                    Definiere Titel, Redaktion, CVD, Bereich, Format und optional Länge & Kurz-Exposé.
+                    Danach kannst du später Drehbücher importieren und Takes anlegen.
+                  </div>
+                </div>
+                <button id="btnNewProject" class="primary" type="button">
+                  + Neues Projekt
+                </button>
+              </article>
+
+              <article class="hub-tile">
+                <div>
+                  <div class="hub-tile-title">Projekt öffnen</div>
+                  <div class="hub-tile-text">
+                    Greife auf bereits gespeicherte Projekte zu. Ideal, um an längeren Reihen oder Staffeln
+                    weiterzuarbeiten.
+                  </div>
+                </div>
+                <button id="btnOpenProject" type="button">
+                  Projekte anzeigen
+                </button>
+              </article>
+
+              <article class="hub-tile">
+                <div>
+                  <div class="hub-tile-title">Mitarbeitende einladen</div>
+                  <div class="hub-tile-text">
+                    Geplant: Kolleginnen und Kollegen per E-Mail einladen, Projekte teilen, Freigaben steuern.
+                    Aktuell als Platzhalter angelegt.
+                  </div>
+                </div>
+                <span class="badge">In Planung</span>
+              </article>
+
+              <article class="hub-tile">
+                <div>
+                  <div class="hub-tile-title">Einstellungen & Logo</div>
+                  <div class="hub-tile-text">
+                    Füge ein Sender- oder Produktionslogo hinzu und passe später Vorgaben für Projekte an
+                    (z.B. Standard-Länge, Zielgruppen-Templates).
+                  </div>
+                </div>
+                <button id="btnOpenBranding" type="button">
+                  Logo / Branding öffnen
+                </button>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <!-- BRANDING / LOGO -->
+        <section id="viewBranding" class="hidden">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Branding & Logo</div>
+              <button id="btnBrandingBack" class="ghost small" type="button">Zurück zum Dashboard</button>
+            </div>
+            <div class="two-column" style="margin-top:0.6rem;">
+              <div>
+                <div class="field">
+                  <label for="brandingLogo">Logo / Banner (PNG, JPG)</label>
+                  <input id="brandingLogo" type="file" accept="image/png,image/jpeg">
+                </div>
+                <p class="muted">
+                  Das Logo wird aktuell nur im Browser angezeigt. Später können wir es serverseitig speichern
+                  und projektspezifisch zuordnen.
+                </p>
+              </div>
+              <div>
+                <div class="section-title">Vorschau im Header</div>
+                <div style="border:1px dashed var(--border-subtle); padding:0.6rem; border-radius:0.7rem;">
+                  <img id="brandingPreview" alt="Logo-Vorschau"
+                       style="max-width:100%; max-height:120px; object-fit:contain;">
+                </div>
               </div>
             </div>
           </div>
+        </section>
 
-          <!-- Buttons -->
-          <div style="display:flex; gap:0.5rem; margin-top:0.6rem;">
-            <button id="saveTakeBtn" class="primary">Take speichern</button>
-            <button id="newTakeBtn" class="small">Neuer Take</button>
-          </div>
-          <div id="formHint" style="margin-top:0.35rem; font-size:0.75rem; color:#9ca3af;">
-            Neuer Take. Timecodes werden automatisch (inkl. Stille) berechnet.
-          </div>
-        </div>
-
-        <!-- AUSGABE -->
-        <div class="card" style="flex:1; min-height:0; display:flex; flex-direction:column; padding:0.75rem; border-radius:0.9rem; background:#020617; border:1px solid #1f2937;">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:0.75rem; margin-bottom:0.5rem;">
-            <div>
-              <div class="section-title">Ausgabe</div>
-              <select id="viewModeSelect">
-                <option value="table">Tabelle</option>
-                <option value="speech">Sprecheransicht</option>
-                <option value="regie">Regie/Kamera</option>
-                <option value="storyboard">Storyboard (16:9)</option>
-              </select>
-              <div style="margin-top:0.3rem; display:flex; gap:0.4rem; flex-wrap:wrap;">
-                <button id="exportWordBtn" class="small">Word-Export</button>
-                <button id="exportPdfBtn" class="small">PDF / Drucken</button>
-              </div>
+        <!-- NEUES PROJEKT -->
+        <section id="viewNewProject" class="hidden">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Neues Projekt anlegen</div>
+              <button id="btnNewProjectBack" class="ghost small" type="button">
+                Zurück zum Dashboard
+              </button>
             </div>
-            <div id="totalDurationInfo" style="font-size:0.8rem; color:#9ca3af;"></div>
+            <div class="card-subtitle">
+              Zuerst nur die wichtigsten Stammdaten. Später kommen Timecodes, Takes und Drehbuch-Import dazu.
+            </div>
+
+            <div style="margin-top:0.6rem; max-width: 780px;">
+              <div class="two-column">
+                <div class="field">
+                  <label for="npTitle">Titel / Projektname</label>
+                  <input id="npTitle" class="input-accent" type="text" placeholder="z.B. Galileo – Quantenphysik Spezial">
+                </div>
+                <div class="field">
+                  <label for="npType">Art</label>
+                  <select id="npType" class="input-accent">
+                    <option value="Einzelbeitrag">Einzelbeitrag</option>
+                    <option value="Serie">Serie</option>
+                    <option value="Staffel">Staffel</option>
+                    <option value="Reihe">Reihe</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="npEditor">Redakteur·in</label>
+                  <input id="npEditor" class="input-accent" type="text" placeholder="Name der Redaktion">
+                </div>
+                <div class="field">
+                  <label for="npCvd">CVD</label>
+                  <input id="npCvd" class="input-accent" type="text" placeholder="Chefin / Chef vom Dienst">
+                </div>
+                <div class="field">
+                  <label for="npArea">Bereich</label>
+                  <input id="npArea" class="input-accent" type="text" placeholder="z.B. Naturwissenschaft, Physik, Chemie …">
+                </div>
+                <div class="field">
+                  <label for="npShow">Sendung</label>
+                  <input id="npShow" class="input-accent" type="text" placeholder="z.B. Galileo, taff, Wissen macht Ah!">
+                </div>
+                <div class="field">
+                  <label for="npFormat">Format</label>
+                  <input id="npFormat" class="input-accent" type="text" placeholder="Magazinbeitrag, Unterrichtsfilm, Social-Clip">
+                </div>
+                <div class="field">
+                  <label for="npLength">Länge (Minuten, optional)</label>
+                  <input id="npLength" class="input-accent" type="number" min="1" step="1" placeholder="z.B. 11">
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="npTeam">Mitarbeitende (kommasepariert)</label>
+                <input id="npTeam" class="input-accent" type="text" placeholder="z.B. Redaktion, Kamera, Schnitt …">
+              </div>
+
+              <div class="two-column">
+                <div class="field">
+                  <label for="npTarget">Zielgruppe</label>
+                  <textarea id="npTarget" placeholder="z.B. 7.–10. Klasse, allgemeinbildend …"></textarea>
+                </div>
+                <div class="field">
+                  <label for="npSynopsis">Kurzinhalt / Exposé</label>
+                  <textarea id="npSynopsis" placeholder="Worum geht es? Zentrale Idee, Dramaturgie, Learning Outcomes …"></textarea>
+                </div>
+              </div>
+
+              <div style="margin-top:0.7rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+                <button id="btnCreateProject" class="primary" type="button">Projekt anlegen</button>
+                <button id="btnCancelNewProject" type="button">Abbrechen</button>
+              </div>
+              <div id="newProjectMessage" class="muted" style="margin-top:0.4rem;"></div>
+            </div>
           </div>
+        </section>
 
-          <div id="outputContainer" class="scroll-wrapper" style="padding:0.4rem;"></div>
-        </div>
-      </section>
-    </main>
-  </div> <!-- Ende #appRoot -->
+        <!-- PROJEKT DETAIL (Stub) -->
+        <section id="viewProject" class="hidden">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title" id="projTitle"></div>
+                <div class="card-subtitle" id="projSubtitle"></div>
+              </div>
+              <button id="btnBackToDashboardFromProject" class="ghost small" type="button">
+                Zurück zum Dashboard
+              </button>
+            </div>
 
-  <!-- Vollbild-Overlay für Storyboard-Bilder -->
-  <div id="imageOverlay" class="image-overlay">
-    <div class="image-overlay-backdrop"></div>
-    <div class="image-overlay-content">
-      <button id="overlayClose" class="small" style="position:absolute; top:8px; right:8px;">X</button>
-      <img id="overlayImage" src="" alt="Storyboard Vollbild">
+            <div class="two-column" id="projMeta"></div>
+
+            <p class="muted" style="margin-top:0.6rem;">
+              Hier kommen in den nächsten Schritten: Timecodes, Takes, Sprechertext, Kamera,
+              Bild-Uploads und DOCX-Import. Aktuell ist dies eine reine Projekt-Stammdatenansicht.
+            </p>
+          </div>
+        </section>
+
+        <!-- PROJEKTE-LISTE -->
+        <section id="viewOpenProjects" class="hidden">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Projekt öffnen</div>
+              <button id="btnCloseOpenProjects" class="ghost small" type="button">Zurück</button>
+            </div>
+            <div class="card-subtitle">
+              Wähle eines deiner gespeicherten Projekte aus. Später kannst du sie mit Mitarbeitenden teilen.
+            </div>
+            <ul id="openProjectsList" class="projects-list"></ul>
+            <div id="openProjectsEmpty" class="muted" style="margin-top:0.4rem;">
+              Noch keine Projekte – lege zuerst ein neues Projekt an.
+            </div>
+          </div>
+        </section>
+
+      </main>
     </div>
   </div>
+</div>
 
-  <!-- DOCX-PARSER -->
-  <script src="https://unpkg.com/mammoth/mammoth.browser.min.js"></script>
+<script>
+  // -------------------------
+  // Helper
+  // -------------------------
+  function $(id) { return document.getElementById(id); }
+  function show(el) { el.classList.remove("hidden"); }
+  function hide(el) { el.classList.add("hidden"); }
 
-  <script>
-    // =======================
-    //  AUTH + GLOBAL STATE
-    // =======================
+  let currentUser = null;
+  let projectsCache = [];
+  let currentProject = null;
 
-    const STORAGE_DATA_PREFIX  = "sbData_"; // pro User
+  function setHeader(text) {
+    $("headerSubtitle").textContent = text;
+  }
 
-    const loginScreen       = document.getElementById("loginScreen");
-    const appRoot           = document.getElementById("appRoot");
-    const loginEmailInput   = document.getElementById("loginEmail");
-    const loginPasswordInput= document.getElementById("loginPassword");
-    const loginBtn          = document.getElementById("loginBtn");
-    const registerBtn       = document.getElementById("registerBtn");
-    const loginStatus       = document.getElementById("loginStatus");
-    const userLabel         = document.getElementById("userLabel");
-    const logoutBtn         = document.getElementById("logoutBtn");
+  function switchView(view) {
+    ["viewDashboard","viewBranding","viewNewProject","viewProject","viewOpenProjects"]
+      .forEach(id => {
+        const el = $(id);
+        if (!el) return;
+        if (id === view) show(el); else hide(el);
+      });
+    if (view === "viewDashboard") setHeader("Dashboard");
+    if (view === "viewBranding") setHeader("Branding & Logo");
+    if (view === "viewNewProject") setHeader("Neues Projekt anlegen");
+    if (view === "viewProject") setHeader("Projekt-Details");
+    if (view === "viewOpenProjects") setHeader("Projekt auswählen");
+  }
 
-    let state = {
-      email: null,
-      isAdmin: false,
-      dataKey: null,
-      projects: [],
-      currentProjectId: null,
-      currentSceneId: null,
-      currentTakeId: null
-    };
+  // -------------------------
+  // Login / Logout
+  // -------------------------
+  function setupLoginUi() {
+    const tabLogin = $("tabLogin");
+    const tabRegister = $("tabRegister");
+    const loginForm = $("loginForm");
+    const registerForm = $("registerForm");
+    const msg = $("loginMessage");
 
-    async function apiGetMe() {
+    tabLogin.addEventListener("click", () => {
+      tabLogin.classList.add("active");
+      tabRegister.classList.remove("active");
+      show(loginForm);
+      hide(registerForm);
+      msg.textContent = "";
+    });
+    tabRegister.addEventListener("click", () => {
+      tabRegister.classList.add("active");
+      tabLogin.classList.remove("active");
+      show(registerForm);
+      hide(loginForm);
+      msg.textContent = "";
+    });
+
+    $("loginButton").addEventListener("click", async () => {
+      msg.textContent = "";
+      const email = $("loginEmail").value.trim();
+      const pw = $("loginPassword").value;
+      if (!email || !pw) {
+        msg.textContent = "Bitte E-Mail/Name und Passwort eingeben.";
+        msg.style.color = "#b91c1c";
+        return;
+      }
       try {
-        const res = await fetch("/api/me");
-        if (!res.ok) return null;
-        return await res.json();
-      } catch {
-        return null;
+        const res = await fetch("/api/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password: pw })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          msg.textContent = data.error || "Login fehlgeschlagen.";
+          msg.style.color = "#b91c1c";
+          return;
+        }
+        currentUser = data;
+        afterLogin();
+      } catch (e) {
+        console.error(e);
+        msg.textContent = "Server nicht erreichbar.";
+        msg.style.color = "#b91c1c";
       }
-    }
+    });
 
-    async function apiLogin(email, password) {
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Login fehlgeschlagen");
+    $("registerButton").addEventListener("click", async () => {
+      msg.textContent = "";
+      const name = $("regName").value.trim();
+      const email = $("regEmail").value.trim();
+      const pw = $("regPassword").value;
+      if (!name || !email || !pw) {
+        msg.textContent = "Bitte alle Felder ausfüllen.";
+        msg.style.color = "#b91c1c";
+        return;
       }
-      return res.json();
-    }
-
-    async function apiRegister(email, password) {
-      const res = await fetch("/api/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Registrierung fehlgeschlagen");
+      try {
+        const res = await fetch("/api/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name, email, password: pw })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          msg.textContent = data.error || "Registrierung fehlgeschlagen.";
+          msg.style.color = "#b91c1c";
+          return;
+        }
+        // Registrierung loggt direkt ein
+        currentUser = data;
+        afterLogin();
+      } catch (e) {
+        console.error(e);
+        msg.textContent = "Server nicht erreichbar.";
+        msg.style.color = "#b91c1c";
       }
-      return res.json();
-    }
+    });
+  }
 
-    async function apiLogout() {
+  async function afterLogin() {
+    $("loginOverlay").classList.add("hidden");
+    show($("app"));
+    $("headerUserName").textContent =
+      (currentUser && currentUser.name ? currentUser.name : "") +
+      (currentUser && currentUser.email ? " (" + currentUser.email + ")" : "");
+    await loadProjects();
+    switchView("viewDashboard");
+  }
+
+  function setupLogout() {
+    $("logoutButton").addEventListener("click", async () => {
       try {
         await fetch("/api/logout", { method: "POST" });
-      } catch {}
-    }
+      } catch (_) {}
+      currentUser = null;
+      projectsCache = [];
+      currentProject = null;
+      hide($("app"));
+      $("loginOverlay").classList.remove("hidden");
+    });
+  }
 
-    function showApp(user) {
-      state.email   = user.email;
-      state.isAdmin = !!user.isAdmin;
-      state.dataKey = STORAGE_DATA_PREFIX + encodeURIComponent(String(user.email).toLowerCase());
-      userLabel.textContent = "Eingeloggt als " + user.email + (user.isAdmin ? " (Admin)" : "");
-      loginScreen.style.display = "none";
-      appRoot.style.display = "flex";
-      initAppState();
-    }
-
-    function showLogin() {
-      appRoot.style.display = "none";
-      loginScreen.style.display = "flex";
-      loginStatus.textContent = "";
-      loginPasswordInput.value = "";
-    }
-
-    async function bootstrapAuth() {
-      const me = await apiGetMe();
-      if (me) {
-        showApp(me);
-      } else {
-        showLogin();
-      }
-    }
-
-    loginBtn.addEventListener("click", async () => {
-      const email = (loginEmailInput.value || "").trim();
-      const pwd   = (loginPasswordInput.value || "").trim();
-      loginStatus.textContent = "";
-      if (!email || !pwd) {
-        loginStatus.textContent = "Bitte E-Mail/Nutzername und Passwort eingeben.";
+  // -------------------------
+  // Projekte
+  // -------------------------
+  async function loadProjects() {
+    try {
+      const res = await fetch("/api/projects");
+      if (!res.ok) {
+        projectsCache = [];
+        renderProjects();
         return;
       }
-      try {
-        const user = await apiLogin(email, pwd);
-        showApp(user);
-      } catch (e) {
-        loginStatus.textContent = e.message;
-      }
+      const data = await res.json();
+      projectsCache = data.projects || [];
+      renderProjects();
+    } catch (e) {
+      console.error(e);
+      projectsCache = [];
+      renderProjects();
+    }
+  }
+
+  function renderProjects() {
+    $("projectCountBadge").textContent =
+      projectsCache.length + (projectsCache.length === 1 ? " Projekt" : " Projekte");
+
+    const sidebar = $("sidebarProjects");
+    sidebar.innerHTML = "";
+    projectsCache.forEach(p => {
+      const li = document.createElement("li");
+      li.className = "projects-list-item";
+      li.innerHTML = `
+        <div>
+          <div>${p.title || "Ohne Titel"}</div>
+          <div class="muted">${p.show || ""}</div>
+        </div>
+        <span class="badge">${(p.area || "Allgemein").slice(0,18)}</span>
+      `;
+      li.addEventListener("click", () => openProject(p));
+      sidebar.appendChild(li);
     });
 
-    registerBtn.addEventListener("click", async () => {
-      const email = (loginEmailInput.value || "").trim();
-      const pwd   = (loginPasswordInput.value || "").trim();
-      loginStatus.textContent = "";
-      if (!email || !pwd) {
-        loginStatus.textContent = "Bitte E-Mail und Passwort für die Registrierung eingeben.";
+    $("sidebarProjectInfo").textContent = currentProject
+      ? (currentProject.title || "Ohne Titel")
+      : "Noch kein Projekt ausgewählt.";
+  }
+
+  async function createProjectFromForm() {
+    const msg = $("newProjectMessage");
+    msg.textContent = "";
+    msg.style.color = "#6b7280";
+
+    const payload = {
+      title: $("npTitle").value.trim(),
+      editor: $("npEditor").value.trim(),
+      cvd: $("npCvd").value.trim(),
+      area: $("npArea").value.trim(),
+      show: $("npShow").value.trim(),
+      format: $("npFormat").value.trim(),
+      type: $("npType").value,
+      lengthMinutes: $("npLength").value ? Number($("npLength").value) : null,
+      meta: {
+        team: $("npTeam").value.trim(),
+        zielgruppe: $("npTarget").value.trim(),
+        synopsis: $("npSynopsis").value.trim()
+      }
+    };
+
+    if (!payload.title) {
+      msg.textContent = "Bitte mindestens einen Titel vergeben.";
+      msg.style.color = "#b91c1c";
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        msg.textContent = data.error || "Projekt konnte nicht gespeichert werden.";
+        msg.style.color = "#b91c1c";
         return;
       }
-      try {
-        const user = await apiRegister(email, pwd);
-        showApp(user);
-      } catch (e) {
-        loginStatus.textContent = e.message;
-      }
+      msg.textContent = "Projekt gespeichert.";
+      msg.style.color = "#15803d";
+
+      ["npTitle","npEditor","npCvd","npArea","npShow","npFormat","npLength","npTeam","npTarget","npSynopsis"]
+        .forEach(id => { $(id).value = ""; });
+
+      projectsCache.push(data);
+      openProject(data);
+      renderProjects();
+    } catch (e) {
+      console.error(e);
+      msg.textContent = "Serverfehler beim Speichern.";
+      msg.style.color = "#b91c1c";
+    }
+  }
+
+  function openProject(p) {
+    currentProject = p;
+    renderProjects();
+    renderProjectDetail();
+    switchView("viewProject");
+  }
+
+  function renderProjectDetail() {
+    if (!currentProject) return;
+    $("projTitle").textContent = currentProject.title || "Ohne Titel";
+
+    const subtitleParts = [];
+    if (currentProject.show) subtitleParts.push(currentProject.show);
+    if (currentProject.format) subtitleParts.push(currentProject.format);
+    if (currentProject.type) subtitleParts.push(currentProject.type);
+    $("projSubtitle").textContent = subtitleParts.join(" · ");
+
+    const meta = $("projMeta");
+    meta.innerHTML = "";
+    function add(label, value) {
+      const div = document.createElement("div");
+      div.innerHTML = `
+        <div class="muted" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.04em;">${label}</div>
+        <div style="font-weight:500; font-size:0.85rem;">${value || "–"}</div>
+      `;
+      meta.appendChild(div);
+    }
+    add("Redaktion", currentProject.editor);
+    add("CVD", currentProject.cvd);
+    add("Bereich", currentProject.area);
+    add("Sendung", currentProject.show);
+    add("Format", currentProject.format);
+    add("Länge (Min)", currentProject.lengthMinutes != null ? currentProject.lengthMinutes : "");
+    add("Team", currentProject.meta?.team || "");
+    add("Zielgruppe", currentProject.meta?.zielgruppe || "");
+    add("Kurzinhalt", currentProject.meta?.synopsis || "");
+  }
+
+  function showOpenProjects() {
+    const list = $("openProjectsList");
+    const emptyInfo = $("openProjectsEmpty");
+    list.innerHTML = "";
+    if (!projectsCache.length) {
+      show(emptyInfo);
+      return;
+    }
+    hide(emptyInfo);
+    projectsCache.forEach(p => {
+      const li = document.createElement("li");
+      li.className = "projects-list-item";
+      li.innerHTML = `
+        <div>
+          <div>${p.title || "Ohne Titel"}</div>
+          <div class="muted">${p.show || ""}</div>
+        </div>
+        <span class="badge">${(p.area || "Allgemein").slice(0,18)}</span>
+      `;
+      li.addEventListener("click", () => openProject(p));
+      list.appendChild(li);
+    });
+  }
+
+  // -------------------------
+  // Branding / Logo
+  // -------------------------
+  function setupBranding() {
+    $("btnOpenBranding").addEventListener("click", () => {
+      switchView("viewBranding");
+    });
+    $("btnBrandingBack").addEventListener("click", () => {
+      switchView("viewDashboard");
     });
 
-    logoutBtn.addEventListener("click", async () => {
-      await apiLogout();
-      state = {
-        email: null,
-        isAdmin: false,
-        dataKey: null,
-        projects: [],
-        currentProjectId: null,
-        currentSceneId: null,
-        currentTakeId: null
-      };
-      showLogin();
-    });
-
-    // =======================
-    //  APP-STATE & STORAGE
-    // =======================
-
-    function loadData() {
-      if (!state.dataKey) return null;
-      const raw = localStorage.getItem(state.dataKey);
-      if (!raw) return null;
-      try { return JSON.parse(raw); } catch { return null; }
-    }
-    function saveData() {
-      if (!state.dataKey) return;
-      const payload = {
-        projects: state.projects,
-        currentProjectId: state.currentProjectId,
-        currentSceneId: state.currentSceneId
-      };
-      localStorage.setItem(state.dataKey, JSON.stringify(payload));
-    }
-
-    function getCurrentProject() {
-      return state.projects.find(p => p.id === state.currentProjectId) || null;
-    }
-    function getCurrentScene() {
-      const p = getCurrentProject();
-      if (!p) return null;
-      return p.scenes.find(s => s.id === state.currentSceneId) || null;
-    }
-    function ensureSceneHasTakesArray(scene) {
-      if (!scene.takes) scene.takes = [];
-    }
-    function ensureProjectHasPersonsArray(proj) {
-      if (!proj.persons) proj.persons = [];
-    }
-
-    function createId(prefix) {
-      return prefix + "_" + Math.random().toString(36).slice(2, 10);
-    }
-
-    const FPS = 25;
-    function timecodeToFrames(tc) {
-      if (!tc) return 0;
-      const parts = tc.split(":").map(p => parseInt(p, 10) || 0);
-      while (parts.length < 4) parts.unshift(0);
-      const [hh, mm, ss, ff] = parts;
-      return ((hh * 3600 + mm * 60 + ss) * FPS) + ff;
-    }
-    function framesToTimecode(frames) {
-      let total = Math.max(0, Math.round(frames));
-      const ff  = total % FPS;
-      total     = (total - ff) / FPS;
-      const ss  = total % 60;
-      total     = (total - ss) / 60;
-      const mm  = total % 60;
-      const hh  = (total - mm) / 60;
-      const pad = n => String(n).padStart(2, "0");
-      return `${pad(hh)}:${pad(mm)}:${pad(ss)}:${pad(ff)}`;
-    }
-    function estimateDurationSeconds(dialogue, silenceSeconds) {
-      const text  = (dialogue || "").trim();
-      const words = text.split(/\s+/).filter(Boolean).length;
-      const speechSeconds = words > 0 ? (words / 2.5) : 0;
-      const total = speechSeconds + (Number(silenceSeconds) || 0);
-      return Math.max(0.5, total);
-    }
-
-    // NEU: Timecodes strikt sequentiell, Stille wird immer eingerechnet,
-    // Out wird NICHT mehr manuell überschrieben.
-    function recomputeSceneTimecodes(scene) {
-      ensureSceneHasTakesArray(scene);
-      let framesCursor = 0;
-
-      scene.takes.forEach((t, idx) => {
-        let startFrames;
-
-        if (idx === 0) {
-          if (t.timeIn && t.timeIn.trim()) {
-            startFrames = timecodeToFrames(t.timeIn);
-          } else {
-            startFrames = 0;
-          }
-        } else {
-          startFrames = framesCursor;
-        }
-
-        t.timeIn = framesToTimecode(startFrames);
-
-        const durSec    = estimateDurationSeconds(t.dialogue, t.silenceSeconds);
-        const durFrames = durSec * FPS;
-        const outFrames = startFrames + durFrames;
-
-        t.timeOut = framesToTimecode(outFrames);
-        framesCursor = outFrames;
-      });
-    }
-
-    function computeSceneTotalDuration(scene) {
-      ensureSceneHasTakesArray(scene);
-      if (!scene.takes.length) return 0;
-      const last = scene.takes[scene.takes.length - 1];
-      return timecodeToFrames(last.timeOut || "00:00:00:00") / FPS;
-    }
-
-    // =======================
-    //  UI-REFERENZEN
-    // =======================
-
-    let projectSelect, sceneSelect, projectHint;
-    let projectEditorInput, projectCvdInput, projectAreaInput, projectShowInput;
-
-    let takeNumberInput, timeInInput, timeOutInput, silenceInput;
-    let visualInput, dialogueInput, notesInput;
-    let musicInput, originInput;
-    let storyboardUrlInput, storyboardFileInput, storyboardPreview;
-    let saveTakeBtn, newTakeBtn, formHint;
-    let viewModeSelect, outputContainer, totalDurationInfo;
-    let togglePersons, toggleVisual, toggleDialogue, toggleNotes, toggleMusic, toggleOrigin, toggleStoryboard;
-    let personNameInput, personRoleInput, personNotesInput, addPersonBtn, personList;
-    let takePersonsContainer;
-    let docxFileInput, importDocxBtn;
-
-    function bindUiRefs() {
-      projectSelect    = document.getElementById("projectSelect");
-      sceneSelect      = document.getElementById("sceneSelect");
-      projectHint      = document.getElementById("projectHint");
-
-      projectEditorInput = document.getElementById("projectEditor");
-      projectCvdInput    = document.getElementById("projectCvd");
-      projectAreaInput   = document.getElementById("projectArea");
-      projectShowInput   = document.getElementById("projectShow");
-
-      takeNumberInput  = document.getElementById("takeNumber");
-      timeInInput      = document.getElementById("timeIn");
-      timeOutInput     = document.getElementById("timeOut");
-      silenceInput     = document.getElementById("silenceSeconds");
-      visualInput      = document.getElementById("visual");
-      dialogueInput    = document.getElementById("dialogue");
-      notesInput       = document.getElementById("notes");
-      musicInput       = document.getElementById("music");
-      originInput      = document.getElementById("origin");
-
-      storyboardUrlInput  = document.getElementById("storyboardUrl");
-      storyboardFileInput = document.getElementById("storyboardFile");
-      storyboardPreview   = document.getElementById("storyboardPreview");
-
-      saveTakeBtn      = document.getElementById("saveTakeBtn");
-      newTakeBtn       = document.getElementById("newTakeBtn");
-      formHint         = document.getElementById("formHint");
-
-      viewModeSelect   = document.getElementById("viewModeSelect");
-      outputContainer  = document.getElementById("outputContainer");
-      totalDurationInfo= document.getElementById("totalDurationInfo");
-
-      togglePersons    = document.getElementById("togglePersons");
-      toggleVisual     = document.getElementById("toggleVisual");
-      toggleDialogue   = document.getElementById("toggleDialogue");
-      toggleNotes      = document.getElementById("toggleNotes");
-      toggleMusic      = document.getElementById("toggleMusic");
-      toggleOrigin     = document.getElementById("toggleOrigin");
-      toggleStoryboard = document.getElementById("toggleStoryboard");
-
-      personNameInput  = document.getElementById("personName");
-      personRoleInput  = document.getElementById("personRole");
-      personNotesInput = document.getElementById("personNotes");
-      addPersonBtn     = document.getElementById("addPersonBtn");
-      personList       = document.getElementById("personList");
-      takePersonsContainer = document.getElementById("takePersonsContainer");
-
-      docxFileInput    = document.getElementById("docxFile");
-      importDocxBtn    = document.getElementById("importDocxBtn");
-
-      const exportWordBtn = document.getElementById("exportWordBtn");
-      const exportPdfBtn  = document.getElementById("exportPdfBtn");
-
-      const imageOverlay  = document.getElementById("imageOverlay");
-      const overlayImage  = document.getElementById("overlayImage");
-      const overlayClose  = document.getElementById("overlayClose");
-
-      document.getElementById("addProjectBtn").onclick = onAddProject;
-      document.getElementById("addSceneBtn").onclick   = onAddScene;
-
-      projectSelect.onchange = () => {
-        state.currentProjectId = projectSelect.value;
-        const proj = getCurrentProject();
-        state.currentSceneId   = (proj && proj.scenes.length) ? proj.scenes[0].id : null;
-        state.currentTakeId    = null;
-        saveData();
-        renderAll();
-      };
-      sceneSelect.onchange = () => {
-        state.currentSceneId = sceneSelect.value;
-        state.currentTakeId  = null;
-        saveData();
-        renderAll();
-      };
-
-      saveTakeBtn.onclick   = onSaveTake;
-      newTakeBtn.onclick    = () => { state.currentTakeId = null; clearTakeForm(); };
-
-      storyboardFileInput.onchange = onStoryboardFileChange;
-      storyboardUrlInput.oninput   = updateStoryboardPreview;
-
-      viewModeSelect.onchange = renderView;
-      [togglePersons, toggleVisual, toggleDialogue, toggleNotes, toggleMusic, toggleOrigin, toggleStoryboard].forEach(el => {
-        if (el) el.onchange = renderView;
-      });
-
-      addPersonBtn.onclick   = onAddPerson;
-      importDocxBtn.onclick  = onImportDocxClick;
-
-      exportWordBtn.onclick = exportSceneAsWord;
-      exportPdfBtn.onclick  = exportSceneAsPdf;
-
-      function openImageOverlay(url) {
-        if (!url) return;
-        overlayImage.src = url;
-        imageOverlay.classList.add("visible");
-      }
-      function closeImageOverlay() {
-        imageOverlay.classList.remove("visible");
-        overlayImage.src = "";
-      }
-      overlayClose.onclick = closeImageOverlay;
-      imageOverlay.querySelector(".image-overlay-backdrop").onclick = closeImageOverlay;
-
-      storyboardPreview.onclick = () => {
-        const url = (storyboardUrlInput.value || "").trim();
-        if (url) openImageOverlay(url);
-      };
-
-      window._openImageOverlay = openImageOverlay;
-    }
-
-    function initAppState() {
-      const stored = loadData();
-      if (stored && stored.projects && stored.projects.length) {
-        state.projects        = stored.projects;
-        state.currentProjectId= stored.currentProjectId || stored.projects[0].id;
-        const proj = getCurrentProject();
-        state.currentSceneId  = stored.currentSceneId ||
-                                (proj && proj.scenes.length ? proj.scenes[0].id : null);
-      } else {
-        const defaultProject = {
-          id: "p1",
-          name: "Projekt 1",
-          editor: "",
-          cvd: "",
-          area: "",
-          show: "",
-          persons: [],
-          scenes: [
-            { id: "s1", code: "001", title: "Erste Szene", takes: [] }
-          ]
-        };
-        state.projects        = [defaultProject];
-        state.currentProjectId= defaultProject.id;
-        state.currentSceneId  = defaultProject.scenes[0].id;
-      }
-      bindUiRefs();
-      renderAll();
-    }
-
-    // =======================
-    //  PROJEKTE / SZENEN
-    // =======================
-
-    function onAddProject() {
-      const name = prompt("Name des neuen Projekts:");
-      if (!name) return;
-      const id   = createId("p");
-      const proj = {
-        id,
-        name,
-        editor: "",
-        cvd: "",
-        area: "",
-        show: "",
-        persons: [],
-        scenes: [
-          { id: createId("s"), code: "001", title: "Neue Szene", takes: [] }
-        ]
-      };
-      state.projects.push(proj);
-      state.currentProjectId = id;
-      state.currentSceneId   = proj.scenes[0].id;
-      state.currentTakeId    = null;
-      saveData();
-      renderAll();
-    }
-
-    function onAddScene() {
-      const proj = getCurrentProject();
-      if (!proj) return;
-      const title = prompt("Titel der neuen Szene / Episode:");
-      if (!title) return;
-      const code  = prompt("Szenencode (z. B. 001, 010):", "001") || "001";
-      const scene = { id: createId("s"), code, title, takes: [] };
-      proj.scenes.push(scene);
-      state.currentSceneId = scene.id;
-      state.currentTakeId  = null;
-      saveData();
-      renderAll();
-    }
-
-    function onAddPerson() {
-      const proj = getCurrentProject();
-      if (!proj) return;
-      ensureProjectHasPersonsArray(proj);
-      const name  = (personNameInput.value  || "").trim();
-      const role  = (personRoleInput.value  || "").trim();
-      const notes = (personNotesInput.value || "").trim();
-      if (!name) return;
-
-      proj.persons.push({
-        id: createId("pers"),
-        name, role, notes
-      });
-
-      personNameInput.value  = "";
-      personRoleInput.value  = "";
-      personNotesInput.value = "";
-
-      saveData();
-      renderPersons();
-      renderTakePersonsSelector();
-    }
-
-    function clearTakeForm() {
-      takeNumberInput.value = "";
-      timeInInput.value     = "";
-      timeOutInput.value    = "";
-      silenceInput.value    = "0";
-      visualInput.value     = "";
-      dialogueInput.value   = "";
-      notesInput.value      = "";
-      musicInput.value      = "";
-      originInput.value     = "";
-      storyboardUrlInput.value = "";
-      storyboardFileInput.value= "";
-      storyboardPreview.style.display = "none";
-      storyboardPreview.src           = "";
-      formHint.textContent = "Neuer Take. Timecodes werden automatisch (inkl. Stille) berechnet.";
-      formHint.style.color = "#9ca3af";
-      renderTakePersonsSelector([]);
-    }
-
-    function fillTakeForm(take) {
-      takeNumberInput.value = take.number || "";
-      timeInInput.value     = take.timeIn || "";
-      timeOutInput.value    = take.timeOut || "";
-      silenceInput.value    = (take.silenceSeconds != null ? take.silenceSeconds : 0);
-      visualInput.value     = take.visual || "";
-      dialogueInput.value   = take.dialogue || "";
-      notesInput.value      = take.notes || "";
-      musicInput.value      = take.music || "";
-      originInput.value     = take.origin || "";
-      storyboardUrlInput.value = take.storyboardUrl || "";
-      if (take.storyboardUrl) {
-        storyboardPreview.style.display = "block";
-        storyboardPreview.src           = take.storyboardUrl;
-      } else {
-        storyboardPreview.style.display = "none";
-        storyboardPreview.src           = "";
-      }
-      formHint.textContent = "Take ausgewählt. Änderungen werden beim Speichern übernommen.";
-      formHint.style.color = "#9ca3af";
-      renderTakePersonsSelector(take.persons || []);
-    }
-
-    function renderTakePersonsSelector(selectedNames = []) {
-      const proj = getCurrentProject();
-      takePersonsContainer.innerHTML = "";
-      if (!proj) return;
-      ensureProjectHasPersonsArray(proj);
-
-      proj.persons.forEach(p => {
-        const row = document.createElement("div");
-        row.style.display = "flex";
-        row.style.alignItems = "center";
-        row.style.gap = "0.3rem";
-
-        const cb = document.createElement("input");
-        cb.type = "checkbox";
-        cb.value= p.name;
-        if (selectedNames.includes(p.name)) cb.checked = true;
-
-        const label = document.createElement("span");
-        label.textContent = p.name;
-
-        row.appendChild(cb);
-        row.appendChild(label);
-        takePersonsContainer.appendChild(row);
-      });
-    }
-
-    function onStoryboardFileChange(e) {
-      const file = e.target.files && e.target.files[0];
+    $("brandingLogo").addEventListener("change", evt => {
+      const file = evt.target.files && evt.target.files[0];
       if (!file) return;
       const reader = new FileReader();
       reader.onload = () => {
-        storyboardUrlInput.value = reader.result; // Data-URL (lokal)
-        updateStoryboardPreview();
+        $("brandingPreview").src = reader.result;
+        $("headerLogo").src = reader.result;
+        $("brandingPreview").classList.remove("hidden");
+        $("headerLogo").classList.remove("hidden");
       };
       reader.readAsDataURL(file);
-    }
-    function updateStoryboardPreview() {
-      const url = (storyboardUrlInput.value || "").trim();
-      if (!url) {
-        storyboardPreview.style.display = "none";
-        storyboardPreview.src           = "";
-      } else {
-        storyboardPreview.style.display = "block";
-        storyboardPreview.src           = url;
-      }
-    }
+    });
+  }
 
-    function onSaveTake() {
-      const scene = getCurrentScene();
-      if (!scene) return;
-      ensureSceneHasTakesArray(scene);
+  // -------------------------
+  // UI-Verknüpfung
+  // -------------------------
+  function setupUi() {
+    // Dashboard Buttons
+    $("btnNewProject").addEventListener("click", () => {
+      switchView("viewNewProject");
+      $("newProjectMessage").textContent = "";
+    });
+    $("btnNewProjectBack").addEventListener("click", () => {
+      switchView("viewDashboard");
+    });
+    $("btnCancelNewProject").addEventListener("click", () => {
+      switchView("viewDashboard");
+    });
+    $("btnCreateProject").addEventListener("click", createProjectFromForm);
 
-      const number  = (takeNumberInput.value || "").trim();
-      const timeIn  = (timeInInput.value     || "").trim();
-      const silenceSeconds = (silenceInput.value || "0").trim();
-      const visual  = (visualInput.value   || "").trim();
-      const dialogue= (dialogueInput.value || "").trim();
-      const notes   = (notesInput.value    || "").trim();
-      const music   = (musicInput.value    || "").trim();
-      const origin  = (originInput.value   || "").trim();
-      const storyboardUrl = (storyboardUrlInput.value || "").trim();
+    $("btnBackToDashboardFromProject").addEventListener("click", () => {
+      currentProject = null;
+      renderProjects();
+      switchView("viewDashboard");
+    });
 
-      const personsFromSelector = [];
-      takePersonsContainer.querySelectorAll("input[type=checkbox]").forEach(cb => {
-        if (cb.checked) personsFromSelector.push(cb.value);
-      });
+    $("btnOpenProject").addEventListener("click", () => {
+      showOpenProjects();
+      switchView("viewOpenProjects");
+    });
+    $("btnCloseOpenProjects").addEventListener("click", () => {
+      switchView("viewDashboard");
+    });
+  }
 
-      if (!number && !dialogue && !visual) {
-        formHint.textContent = "Bitte mindestens Take-Nummer oder Bild/Sprechertext eingeben.";
-        formHint.style.color = "#fca5a5";
+  // -------------------------
+  // Session prüfen beim Laden
+  // -------------------------
+  async function checkSessionOnLoad() {
+    try {
+      const res = await fetch("/api/me");
+      if (!res.ok) {
+        $("loginOverlay").classList.remove("hidden");
+        hide($("app"));
         return;
       }
-
-      let take = null;
-      if (state.currentTakeId) {
-        take = scene.takes.find(t => t.id === state.currentTakeId);
-      }
-      if (!take) {
-        take = { id: createId("t") };
-        scene.takes.push(take);
-        state.currentTakeId = take.id;
-      }
-
-      take.number         = number;
-      take.timeIn         = timeIn;
-      take.silenceSeconds = Number(silenceSeconds) || 0;
-      take.visual         = visual;
-      take.dialogue       = dialogue;
-      take.notes          = notes;
-      take.music          = music;
-      take.origin         = origin;
-      take.storyboardUrl  = storyboardUrl;
-      take.persons        = personsFromSelector;
-
-      recomputeSceneTimecodes(scene);
-      saveData();
-      renderAll();
-      formHint.textContent = "Take gespeichert und Timecodes aktualisiert.";
-      formHint.style.color = "#9ca3af";
+      const data = await res.json();
+      currentUser = data;
+      await afterLogin();
+    } catch (_) {
+      $("loginOverlay").classList.remove("hidden");
+      hide($("app"));
     }
-
-    // =======================
-    //  DOCX-IMPORT (wie vorher, leicht angepasst)
-    // =======================
-
-    async function handleDocxImportToNewProject(file, arrayBuffer, html) {
-      const tmp = document.createElement("div");
-      tmp.innerHTML = html;
-
-      const headings = Array.from(tmp.querySelectorAll("h1,h2,h3"));
-      const tables   = Array.from(tmp.querySelectorAll("table"));
-
-      if (!headings.length || !tables.length) {
-        alert("Keine passenden Überschriften/Tabellen gefunden, importiere in aktuelle Szene.");
-        return false; // Fallback
-      }
-
-      const useNewProject = confirm(
-        "Neues Projekt aus DOCX anlegen und pro Überschrift (Film 1, Film 2 …) eine Szene erzeugen?\n" +
-        "OK = Neues Projekt, Abbrechen = in aktuelle Szene importieren."
-      );
-      if (!useNewProject) return false;
-
-      const baseName = file.name.replace(/\.[^.]+$/, "");
-      const projId   = createId("p");
-      const proj = {
-        id: projId,
-        name: baseName,
-        editor: "",
-        cvd: "",
-        area: "",
-        show: "",
-        persons: [],
-        scenes: []
-      };
-
-      function importTablesIntoScene(scene, rootNodes) {
-        rootNodes.forEach(node => {
-          const localTables = node.tagName === "TABLE"
-            ? [node]
-            : Array.from(node.querySelectorAll("table"));
-
-          localTables.forEach(table => {
-            const rows = Array.from(table.querySelectorAll("tr"));
-            if (rows.length < 2) return;
-
-            const headerCells = Array.from(rows[0].querySelectorAll("td,th"))
-              .map(c => c.textContent.trim().toLowerCase());
-            const row1Cells   = Array.from(rows[1].querySelectorAll("td,th"))
-              .map(c => c.textContent.trim().toLowerCase());
-
-            const isDescSpeaker =
-              headerCells.some(h => h.includes("beschreibung")) ||
-              row1Cells.some(h   => h.includes("beschreibung"));
-
-            if (!isDescSpeaker) return;
-
-            for (let i = 1; i < rows.length; i++) {
-              const cells = Array.from(rows[i].querySelectorAll("td,th"))
-                .map(c => c.textContent.replace(/\s+/g, " ").trim());
-              if (cells.every(c => !c)) continue;
-
-              const visual   = cells[0] || "";
-              const dialogue = cells.slice(1).join(" ").trim();
-
-              const take = {
-                id: createId("t"),
-                number: "IMP-" + (scene.takes.length + 1),
-                timeIn: "",
-                timeOut: "",
-                silenceSeconds: 0,
-                persons: [],
-                visual,
-                dialogue,
-                notes: "",
-                music: "",
-                origin: "",
-                storyboardUrl: ""
-              };
-              scene.takes.push(take);
-            }
-          });
-        });
-
-        recomputeSceneTimecodes(scene);
-      }
-
-      headings.forEach((h, idx) => {
-        const title = h.textContent.trim() || ("Film " + (idx + 1));
-        const scene = {
-          id: createId("s"),
-          code: String(idx + 1).padStart(3, "0"),
-          title,
-          takes: []
-        };
-
-        const nodesForScene = [];
-        let node = h.nextSibling;
-        while (node && !headings.includes(node)) {
-          if (node.nodeType === Node.ELEMENT_NODE) {
-            nodesForScene.push(node);
-          }
-          node = node.nextSibling;
-        }
-
-        importTablesIntoScene(scene, nodesForScene);
-        proj.scenes.push(scene);
-      });
-
-      state.projects.push(proj);
-      state.currentProjectId = proj.id;
-      state.currentSceneId   = proj.scenes.length ? proj.scenes[0].id : null;
-      state.currentTakeId    = null;
-      saveData();
-      renderAll();
-      alert("Neues Projekt \"" + baseName + "\" mit " + proj.scenes.length + " Szene(n) angelegt.");
-      return true;
-    }
-
-    function onImportDocxClick() {
-      const file = docxFileInput.files && docxFileInput.files[0];
-      if (!file) {
-        alert("Bitte zuerst eine DOCX-Datei auswählen.");
-        return;
-      }
-      if (!window.mammoth) {
-        alert("DOCX-Parser (mammoth.js) konnte nicht geladen werden. Internetverbindung nötig.");
-        return;
-      }
-
-      const scene = getCurrentScene();
-      if (!scene) {
-        alert("Bitte zuerst ein Projekt und eine Szene auswählen.");
-        return;
-      }
-      ensureSceneHasTakesArray(scene);
-
-      const reader = new FileReader();
-      reader.onload = async function (e) {
-        try {
-          const arrayBuffer = e.target.result;
-          const result = await window.mammoth.convertToHtml({ arrayBuffer });
-          const html   = result.value || "";
-
-          const handledAsProject = await handleDocxImportToNewProject(file, arrayBuffer, html);
-          if (handledAsProject) return;
-
-          const tmp = document.createElement("div");
-          tmp.innerHTML = html;
-
-          const tables  = tmp.querySelectorAll("table");
-          let created   = 0;
-
-          tables.forEach(table => {
-            const rows = Array.from(table.querySelectorAll("tr"));
-            if (rows.length < 2) return;
-
-            const headerCells = Array.from(rows[0].querySelectorAll("td,th"))
-              .map(c => c.textContent.trim().toLowerCase());
-            const row1Cells   = Array.from(rows[1].querySelectorAll("td,th"))
-              .map(c => c.textContent.trim().toLowerCase());
-
-            const isDescSpeaker =
-              headerCells.some(h => h.includes("beschreibung")) ||
-              row1Cells.some(h   => h.includes("beschreibung"));
-
-            if (!isDescSpeaker) return;
-
-            for (let i = 1; i < rows.length; i++) {
-              const cells = Array.from(rows[i].querySelectorAll("td,th"))
-                .map(c => c.textContent.replace(/\s+/g, " ").trim());
-              if (cells.every(c => !c)) continue;
-
-              const visual   = cells[0] || "";
-              const dialogue = cells.slice(1).join(" ").trim();
-
-              const take = {
-                id: createId("t"),
-                number: "IMP-" + (scene.takes.length + 1),
-                timeIn: "",
-                timeOut: "",
-                silenceSeconds: 0,
-                persons: [],
-                visual,
-                dialogue,
-                notes: "",
-                music: "",
-                origin: "",
-                storyboardUrl: ""
-              };
-              scene.takes.push(take);
-              created++;
-            }
-          });
-
-          if (created === 0) {
-            alert("Es konnten keine passenden Tabellen (Beschreibung/Sprechertext) gefunden werden.");
-          } else {
-            recomputeSceneTimecodes(scene);
-            saveData();
-            renderAll();
-            alert(created + " Takes aus DOCX übernommen.");
-          }
-        } catch (err) {
-          console.error(err);
-          alert("Fehler beim DOCX-Import: " + err.message);
-        }
-      };
-      reader.readAsArrayBuffer(file);
-    }
-
-    // =======================
-    //  RENDERING
-    // =======================
-
-    function renderProjects() {
-      projectSelect.innerHTML = "";
-      state.projects.forEach(p => {
-        const opt = document.createElement("option");
-        opt.value = p.id;
-        opt.textContent = p.name;
-        projectSelect.appendChild(opt);
-      });
-      if (state.currentProjectId) projectSelect.value = state.currentProjectId;
-      const proj = getCurrentProject();
-      if (proj) projectHint.textContent = `${proj.scenes.length} Szene(n) in diesem Projekt.`;
-      else      projectHint.textContent = "";
-      renderProjectMeta();
-      renderPersons();
-      renderTakePersonsSelector();
-    }
-
-    function renderScenes() {
-      const proj = getCurrentProject();
-      sceneSelect.innerHTML = "";
-      if (!proj) return;
-      proj.scenes.forEach(s => {
-        const opt = document.createElement("option");
-        opt.value = s.id;
-        opt.textContent = `${s.code} – ${s.title}`;
-        sceneSelect.appendChild(opt);
-      });
-      if (state.currentSceneId) sceneSelect.value = state.currentSceneId;
-    }
-
-    function renderProjectMeta() {
-      const proj = getCurrentProject();
-      if (!proj) return;
-      projectEditorInput.value = proj.editor || "";
-      projectCvdInput.value    = proj.cvd    || "";
-      projectAreaInput.value   = proj.area   || "";
-      projectShowInput.value   = proj.show   || "";
-
-      // Update on change
-      projectEditorInput.oninput = () => { proj.editor = projectEditorInput.value; saveData(); };
-      projectCvdInput.oninput    = () => { proj.cvd    = projectCvdInput.value;    saveData(); };
-      projectAreaInput.oninput   = () => { proj.area   = projectAreaInput.value;   saveData(); };
-      projectShowInput.oninput   = () => { proj.show   = projectShowInput.value;   saveData(); };
-    }
-
-    function renderPersons() {
-      const proj = getCurrentProject();
-      personList.innerHTML = "";
-      if (!proj) return;
-      ensureProjectHasPersonsArray(proj);
-
-      proj.persons.forEach(p => {
-        const div  = document.createElement("div");
-        div.textContent = p.name + (p.role ? " – " + p.role : "");
-        personList.appendChild(div);
-      });
-    }
-
-    function renderTakeForm() {
-      const scene = getCurrentScene();
-      if (!scene) { clearTakeForm(); return; }
-      ensureSceneHasTakesArray(scene);
-      if (!state.currentTakeId) { clearTakeForm(); return; }
-      const take = scene.takes.find(t => t.id === state.currentTakeId);
-      if (!take) { clearTakeForm(); return; }
-      fillTakeForm(take);
-    }
-
-    function renderView() {
-      const scene = getCurrentScene();
-      outputContainer.innerHTML = "";
-      if (!scene) {
-        outputContainer.innerHTML = "<div style='padding:0.5rem; font-size:0.8rem;'>Keine Szene ausgewählt.</div>";
-        totalDurationInfo.textContent = "";
-        return;
-      }
-      ensureSceneHasTakesArray(scene);
-      const takes = scene.takes;
-
-      const totalSec = computeSceneTotalDuration(scene);
-      if (totalSec > 0) {
-        const min = Math.floor(totalSec / 60);
-        const sec = Math.round(totalSec % 60);
-        totalDurationInfo.textContent = `Gesamtdauer: ${min}m ${sec}s`;
-      } else {
-        totalDurationInfo.textContent = "Noch keine Takes.";
-      }
-
-      const mode = viewModeSelect.value;
-      if (mode === "table")      renderTableView(takes);
-      else if (mode === "speech")renderSpeechView(takes);
-      else if (mode === "regie") renderRegieView(takes);
-      else if (mode === "storyboard") renderStoryboardView(takes);
-    }
-
-    // Tabellenansicht mit Drag&Drop
-    function renderTableView(takes) {
-      const showPersons    = togglePersons.checked;
-      const showVisual     = toggleVisual.checked;
-      const showDialogue   = toggleDialogue.checked;
-      const showNotes      = toggleNotes.checked;
-      const showMusic      = toggleMusic.checked;
-      const showOrigin     = toggleOrigin.checked;
-      const showStoryboard = toggleStoryboard.checked;
-
-      const table = document.createElement("table");
-      table.style.width = "100%";
-      table.style.borderCollapse = "collapse";
-      table.style.fontSize = "0.8rem";
-
-      const thead = document.createElement("thead");
-      const trHead= document.createElement("tr");
-
-      function addHead(text) {
-        const th = document.createElement("th");
-        th.textContent = text;
-        th.style.borderBottom = "1px solid #1f2937";
-        th.style.padding = "0.25rem 0.3rem";
-        th.style.textAlign = "left";
-        trHead.appendChild(th);
-      }
-
-      addHead("#");
-      addHead("Take");
-      addHead("In");
-      addHead("Out");
-      if (showPersons)    addHead("Personen");
-      if (showVisual)     addHead("Bild/Kamera");
-      if (showDialogue)   addHead("Sprecher");
-      if (showNotes)      addHead("Notizen");
-      if (showMusic)      addHead("Musik");
-      if (showOrigin)     addHead("Herkunft");
-      if (showStoryboard) addHead("Storyboard");
-
-      thead.appendChild(trHead);
-      table.appendChild(thead);
-
-      const tbody = document.createElement("tbody");
-
-      let dragSrcIndex = null;
-
-      takes.forEach((t, index) => {
-        const tr = document.createElement("tr");
-        tr.style.borderBottom = "1px solid #0f172a";
-        tr.dataset.takeId = t.id;
-        tr.dataset.index  = index;
-        tr.draggable = true;
-
-        tr.addEventListener("dragstart", (ev) => {
-          dragSrcIndex = index;
-          ev.dataTransfer.effectAllowed = "move";
-          ev.dataTransfer.setData("text/plain", String(index));
-        });
-        tr.addEventListener("dragover", (ev) => {
-          ev.preventDefault();
-          tr.classList.add("drag-over");
-        });
-        tr.addEventListener("dragleave", () => {
-          tr.classList.remove("drag-over");
-        });
-        tr.addEventListener("drop", (ev) => {
-          ev.preventDefault();
-          tr.classList.remove("drag-over");
-          const scene = getCurrentScene();
-          if (!scene) return;
-          const fromIndex = dragSrcIndex;
-          const toIndex   = parseInt(tr.dataset.index, 10);
-          if (fromIndex == null || isNaN(toIndex) || fromIndex === toIndex) return;
-
-          const arr = scene.takes;
-          const [moved] = arr.splice(fromIndex, 1);
-          arr.splice(toIndex, 0, moved);
-
-          // nach dem Umordnen neu nummerieren (Take-Nummer optional)
-          arr.forEach((take, i) => {
-            if (!take.number) {
-              take.number = String(i + 1);
-            }
-          });
-
-          recomputeSceneTimecodes(scene);
-          saveData();
-          renderAll();
-        });
-
-        tr.onclick = (ev) => {
-          // Klicken, aber Drag ignorieren
-          if (ev.target.classList.contains("drag-handle")) return;
-          state.currentTakeId = t.id;
-          renderTakeForm();
-        };
-
-        let td;
-
-        td = document.createElement("td");
-        td.style.padding = "0.25rem 0.3rem";
-        td.style.width = "22px";
-        td.innerHTML = "&#9776;";
-        td.className = "drag-handle";
-        tr.appendChild(td);
-
-        td = document.createElement("td");
-        td.textContent = t.number || "";
-        td.style.padding = "0.25rem 0.3rem";
-        tr.appendChild(td);
-
-        td = document.createElement("td");
-        td.textContent = t.timeIn || "";
-        td.style.padding = "0.25rem 0.3rem";
-        td.style.fontFamily = "monospace";
-        tr.appendChild(td);
-
-        td = document.createElement("td");
-        td.textContent = t.timeOut || "";
-        td.style.padding = "0.25rem 0.3rem";
-        td.style.fontFamily = "monospace";
-        tr.appendChild(td);
-
-        if (showPersons) {
-          td = document.createElement("td");
-          td.textContent = (t.persons || []).join(", ");
-          td.style.padding = "0.25rem 0.3rem";
-          tr.appendChild(td);
-        }
-        if (showVisual) {
-          td = document.createElement("td");
-          td.textContent = (t.visual || "").slice(0, 200);
-          td.style.padding = "0.25rem 0.3rem";
-          tr.appendChild(td);
-        }
-        if (showDialogue) {
-          td = document.createElement("td");
-          td.textContent = (t.dialogue || "").slice(0, 200);
-          td.style.padding = "0.25rem 0.3rem";
-          tr.appendChild(td);
-        }
-        if (showNotes) {
-          td = document.createElement("td");
-          td.textContent = (t.notes || "").slice(0, 200);
-          td.style.padding = "0.25rem 0.3rem";
-          tr.appendChild(td);
-        }
-        if (showMusic) {
-          td = document.createElement("td");
-          td.textContent = (t.music || "").slice(0, 200);
-          td.style.padding = "0.25rem 0.3rem";
-          tr.appendChild(td);
-        }
-        if (showOrigin) {
-          td = document.createElement("td");
-          td.textContent = (t.origin || "").slice(0, 200);
-          td.style.padding = "0.25rem 0.3rem";
-          tr.appendChild(td);
-        }
-        if (showStoryboard) {
-          td = document.createElement("td");
-          td.style.padding = "0.25rem 0.3rem";
-          if (t.storyboardUrl) {
-            const div = document.createElement("div");
-            div.className = "table-storyboard-thumb";
-            const img = document.createElement("img");
-            img.src = t.storyboardUrl;
-            img.onclick = (ev) => {
-              ev.stopPropagation();
-              window._openImageOverlay && window._openImageOverlay(t.storyboardUrl);
-            };
-            div.appendChild(img);
-            td.appendChild(div);
-          }
-          tr.appendChild(td);
-        }
-
-        tbody.appendChild(tr);
-      });
-
-      table.appendChild(tbody);
-      outputContainer.innerHTML = "";
-      outputContainer.appendChild(table);
-    }
-
-    function renderSpeechView(takes) {
-      const wrapper = document.createElement("div");
-      wrapper.className = "speech-list";
-
-      takes.forEach(t => {
-        if (!t.dialogue) return;
-
-        const row = document.createElement("div");
-        row.className = "speech-row";
-
-        const timeCol = document.createElement("div");
-        timeCol.className = "speech-time";
-        timeCol.innerHTML =
-          `<div class="mono">${t.timeIn || ""}<br>${t.timeOut || ""}</div>`;
-
-        const textCol = document.createElement("div");
-        textCol.className = "speech-text";
-
-        const bubble = document.createElement("div");
-        bubble.className = "speech-bubble";
-        bubble.textContent = t.dialogue;
-
-        textCol.appendChild(bubble);
-        row.appendChild(timeCol);
-        row.appendChild(textCol);
-        wrapper.appendChild(row);
-      });
-
-      outputContainer.innerHTML = "";
-      outputContainer.appendChild(wrapper);
-    }
-
-    function renderRegieView(takes) {
-      const wrapper = document.createElement("div");
-      wrapper.className = "regie-list";
-
-      takes.forEach(t => {
-        const row = document.createElement("div");
-        row.className = "regie-row";
-
-        const timeCol = document.createElement("div");
-        timeCol.className = "regie-time";
-        timeCol.innerHTML =
-          `<div class="mono">${t.timeIn || ""}<br>${t.timeOut || ""}</div>`;
-
-        const visualCol = document.createElement("div");
-        visualCol.className = "regie-visual";
-        visualCol.innerHTML = `<strong>Bild/Kamera:</strong><br>${t.visual || ""}`;
-
-        const dialogueCol = document.createElement("div");
-        dialogueCol.className = "regie-dialogue";
-        dialogueCol.innerHTML = `<strong>Sprecher:</strong><br>${t.dialogue || ""}`;
-
-        row.appendChild(timeCol);
-        row.appendChild(visualCol);
-        row.appendChild(dialogueCol);
-
-        wrapper.appendChild(row);
-      });
-
-      outputContainer.innerHTML = "";
-      outputContainer.appendChild(wrapper);
-    }
-
-    function renderStoryboardView(takes) {
-      const grid = document.createElement("div");
-      grid.style.display = "grid";
-      grid.style.gridTemplateColumns = "repeat(auto-fill, minmax(260px, 1fr))";
-      grid.style.gap = "0.6rem";
-
-      takes.forEach(t => {
-        const card = document.createElement("div");
-        card.style.border = "1px solid #1f2937";
-        card.style.borderRadius = "0.7rem";
-        card.style.padding = "0.4rem";
-        card.style.fontSize = "0.8rem";
-
-        const row = document.createElement("div");
-        row.style.display = "flex";
-        row.style.gap = "0.5rem";
-
-        const thumb = document.createElement("div");
-        thumb.className = "storyboard-thumb";
-
-        if (t.storyboardUrl) {
-          const img = document.createElement("img");
-          img.src = t.storyboardUrl;
-          img.onclick = () => window._openImageOverlay && window._openImageOverlay(t.storyboardUrl);
-          thumb.appendChild(img);
-        } else {
-          thumb.textContent = "Kein Bild";
-        }
-
-        const right = document.createElement("div");
-        right.style.flex = "1";
-
-        const dialog = document.createElement("div");
-        dialog.innerHTML = `<strong>Sprecher:</strong> ${t.dialogue || ""}`;
-
-        const visual = document.createElement("div");
-        visual.style.marginTop = "0.2rem";
-        visual.innerHTML = `<span style="font-size:0.75rem; color:#9ca3af;">Kamera:</span> ${t.visual || ""}`;
-
-        right.appendChild(dialog);
-        right.appendChild(visual);
-
-        row.appendChild(thumb);
-        row.appendChild(right);
-
-        const tc = document.createElement("div");
-        tc.style.fontFamily = "monospace";
-        tc.style.fontSize = "0.75rem";
-        tc.style.marginTop = "0.2rem";
-        tc.textContent = `${t.timeIn || ""} – ${t.timeOut || ""}`;
-
-        card.appendChild(row);
-        card.appendChild(tc);
-
-        grid.appendChild(card);
-      });
-
-      outputContainer.innerHTML = "";
-      outputContainer.appendChild(grid);
-    }
-
-    // =======================
-    //  EXPORT
-    // =======================
-
-    function exportSceneAsWord() {
-      const proj  = getCurrentProject();
-      const scene = getCurrentScene();
-      if (!scene) {
-        alert("Keine Szene ausgewählt.");
-        return;
-      }
-      const title = (proj ? proj.name + " – " : "") + (scene.code + " " + scene.title);
-
-      let html = `
-<html>
-<head>
-<meta charset="UTF-8">
-<title>${title}</title>
-<style>
-  body { font-family: Arial, sans-serif; font-size: 11pt; }
-  h1 { font-size: 16pt; }
-  .page { column-count: 2; column-gap: 1cm; }
-  .block { break-inside: avoid; margin-bottom: 0.5cm; }
-  .tc { font-family: monospace; font-size: 9pt; color:#555; margin-bottom:0.1cm; }
-  .img { width:6cm; height:3.375cm; object-fit:cover; border:0.5pt solid #999; margin-bottom:0.1cm; }
-  .label { font-weight:bold; }
-</style>
-</head>
-<body>
-<h1>${title}</h1>
-<div class="page">
-`;
-
-      const sceneObj = getCurrentScene();
-      ensureSceneHasTakesArray(sceneObj);
-
-      sceneObj.takes.forEach(t => {
-        html += `<div class="block">`;
-        html += `<div class="tc">${t.number || ""} – ${t.timeIn || ""} – ${t.timeOut || ""}</div>`;
-        if (t.storyboardUrl) {
-          html += `<img class="img" src="${t.storyboardUrl}"><br>`;
-        }
-        html += `<span class="label">Bild/Kamera:</span> ${(t.visual || "")}<br>`;
-        html += `<span class="label">Sprecher:</span> ${(t.dialogue || "")}<br>`;
-        if (t.music) {
-          html += `<span class="label">Musik:</span> ${(t.music || "")}<br>`;
-        }
-        if (t.origin) {
-          html += `<span class="label">Herkunft:</span> ${(t.origin || "")}<br>`;
-        }
-        html += `</div>`;
-      });
-
-      html += `</div></body></html>`;
-
-      const blob = new Blob(['\ufeff', html], { type: "application/msword" });
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement("a");
-      a.href = url;
-      a.download = (scene.code + "_" + scene.title + ".doc");
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
-
-    function exportSceneAsPdf() {
-      const proj  = getCurrentProject();
-      const scene = getCurrentScene();
-      if (!scene) {
-        alert("Keine Szene ausgewählt.");
-        return;
-      }
-      const title = (proj ? proj.name + " – " : "") + (scene.code + " " + scene.title);
-
-      let html = `
-<html>
-<head>
-<meta charset="UTF-8">
-<title>${title}</title>
-<style>
-  @page { size: A4 portrait; margin: 1.5cm; }
-  body { font-family: Arial, sans-serif; font-size: 11pt; }
-  h1 { font-size: 16pt; }
-  .page { column-count: 2; column-gap: 1cm; }
-  .block { break-inside: avoid; margin-bottom: 0.5cm; }
-  .tc { font-family: monospace; font-size: 9pt; color:#555; margin-bottom:0.1cm; }
-  .img { width:6cm; height:3.375cm; object-fit:cover; border:0.5pt solid #999; margin-bottom:0.1cm; }
-  .label { font-weight:bold; }
-</style>
-</head>
-<body>
-<h1>${title}</h1>
-<div class="page">
-`;
-
-      const sceneObj = getCurrentScene();
-      ensureSceneHasTakesArray(sceneObj);
-
-      sceneObj.takes.forEach(t => {
-        html += `<div class="block">`;
-        html += `<div class="tc">${t.number || ""} – ${t.timeIn || ""} – ${t.timeOut || ""}</div>`;
-        if (t.storyboardUrl) {
-          html += `<img class="img" src="${t.storyboardUrl}"><br>`;
-        }
-        html += `<span class="label">Bild/Kamera:</span> ${(t.visual || "")}<br>`;
-        html += `<span class="label">Sprecher:</span> ${(t.dialogue || "")}<br>`;
-        if (t.music) {
-          html += `<span class="label">Musik:</span> ${(t.music || "")}<br>`;
-        }
-        if (t.origin) {
-          html += `<span class="label">Herkunft:</span> ${(t.origin || "")}<br>`;
-        }
-        html += `</div>`;
-      });
-
-      html += `</div></body></html>`;
-
-      const win = window.open("", "_blank");
-      win.document.open();
-      win.document.write(html);
-      win.document.close();
-      win.focus();
-      win.print();
-    }
-
-    // =======================
-    //  ALLES STARTEN
-    // =======================
-
-    bootstrapAuth();
-  </script>
+  }
+
+  // Init
+  setupLoginUi();
+  setupLogout();
+  setupBranding();
+  setupUi();
+  checkSessionOnLoad();
+</script>
 </body>
 </html>
