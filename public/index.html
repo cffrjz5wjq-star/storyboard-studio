@@ -1388,6 +1388,27 @@
   setupAppUi();
 
   const session = getSession();
+  // Projekt aus der Liste im Editor öffnen
+document.addEventListener("click", (e) => {
+  const el = e.target.closest("[data-open-project-id]");
+  if (!el) return;
+
+  const pid = el.getAttribute("data-open-project-id");
+  if (!pid) return;
+
+  const projects = loadJSON("sb_projects", []);
+  const proj = projects.find(p => p.id === pid);
+  if (!proj) {
+    alert("Projekt nicht gefunden.");
+    return;
+  }
+
+  // aktives Projekt merken, damit project.html es laden kann
+  localStorage.setItem("sb_active_project", JSON.stringify(proj));
+
+  // weiter in den Projekt-Editor
+  window.location.href = "project.html";
+});
   if (session && findUserByEmail(session.email)) {
     currentUser = findUserByEmail(session.email);
     afterLogin();
