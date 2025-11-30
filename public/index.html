@@ -270,6 +270,29 @@
       gap: 0.8rem;
     }
 
+    /* Tabelle für Takes */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+    }
+    th, td {
+      padding: 0.3rem 0.4rem;
+      border-bottom: 1px solid var(--border-subtle);
+      text-align: left;
+      vertical-align: top;
+    }
+    tbody tr:hover {
+      background: #f9fafb;
+      cursor: pointer;
+    }
+    .thumb {
+      max-width: 120px;
+      max-height: 80px;
+      border-radius: 0.4rem;
+      object-fit: cover;
+    }
+
     .hidden {
       display: none !important;
     }
@@ -421,10 +444,11 @@
 
     <div class="login-footer">
       <span id="loginMessage"></span>
-      <span class="muted">Version 0.2 – Dashboard & Projekte</span>
+      <span class="muted">Version 0.3 – Dashboard & Takes</span>
     </div>
   </div>
 </div>
+
 <div class="app-shell">
   <div class="app-frame hidden" id="app">
     <header>
@@ -557,8 +581,9 @@
           </div>
         </section>
 
-        <!-- PROJEKTDETAIL / PLATZHALTER FÜR EDITOR -->
+        <!-- PROJEKTDETAIL + TAKE-EDITOR -->
         <section id="viewProject" class="hidden">
+          <!-- Meta-Karte -->
           <div class="card">
             <div class="card-header">
               <div>
@@ -573,14 +598,95 @@
             <div class="two-col" id="projMeta"></div>
           </div>
 
+          <!-- Editor-Karte -->
           <div class="card">
-            <div class="card-title">Nächster Schritt: Takes, Timecodes & Storyboard</div>
-            <p class="muted">
-              Hier kommt im nächsten Schritt der eigentliche Editor hin:  
-              Takes / Szenen, Timecodes (In/Out), Sprechertext, Kamera, Bild-Upload (1920×1080),
-              DOCX-Import und automatische Berechnungen.  
-              Die Projektansicht ist bereits mit der Projekt-ID verknüpft, damit wir den Editor darauf aufbauen können.
-            </p>
+            <div class="card-header">
+              <div class="card-title">Takes, Timecodes & Storyboard</div>
+              <span class="muted" id="takesInfo">Noch keine Takes</span>
+            </div>
+
+            <div class="two-col">
+              <!-- Formular links -->
+              <div>
+                <div class="field">
+                  <label for="takeNr">Take-Nummer</label>
+                  <input id="takeNr" type="text" placeholder="z.B. 1, 1a, 2 …">
+                </div>
+                <div class="field">
+                  <label>Timecode In / Out (hh:mm:ss:ff)</label>
+                  <div style="display:flex; gap:0.4rem;">
+                    <input id="takeIn" type="text" placeholder="00:00:00:00">
+                    <input id="takeOut" type="text" placeholder="00:00:05:00">
+                  </div>
+                  <div style="margin-top:0.3rem; display:flex; gap:0.4rem; flex-wrap:wrap;">
+                    <button id="btnTakeFromLast" class="small" type="button">
+                      In = letzter Out
+                    </button>
+                    <button id="btnEstimateDuration" class="small" type="button">
+                      Out aus Sprechertext schätzen
+                    </button>
+                  </div>
+                </div>
+
+                <div class="field">
+                  <label for="takeSpeakerText">Sprechertext / Dialog</label>
+                  <textarea id="takeSpeakerText" placeholder="Gesprochener Text für diesen Take …"></textarea>
+                </div>
+
+                <div class="field">
+                  <label for="takePersons">Personen</label>
+                  <input id="takePersons" type="text" placeholder="Moderation, Off, Interviewpartner …">
+                </div>
+                <div class="field">
+                  <label for="takeCamera">Bild / Kamera</label>
+                  <input id="takeCamera" type="text" placeholder="Totale, Halbtotale, Detail, Dolly, Drone …">
+                </div>
+                <div class="field">
+                  <label for="takeMusic">Musik</label>
+                  <input id="takeMusic" type="text" placeholder="Track, Komponist, Library, Stimmung …">
+                </div>
+                <div class="field">
+                  <label for="takeSource">Herkunft / Bildnachweis</label>
+                  <input id="takeSource" type="text" placeholder="Agentur, Archiv, Eigenmaterial …">
+                </div>
+                <div class="field">
+                  <label for="takeNotes">Notizen</label>
+                  <textarea id="takeNotes" placeholder="Besonderheiten, Regiehinweise, VFX, KI-Prompts …"></textarea>
+                </div>
+
+                <div class="field">
+                  <label for="takeImageFile">Storyboard-Bild (max. 1920×1080)</label>
+                  <input id="takeImageFile" type="file" accept="image/*">
+                  <div id="takeImagePreview" style="margin-top:0.4rem;"></div>
+                </div>
+
+                <div style="margin-top:0.4rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+                  <button id="btnSaveTake" class="primary" type="button">Take speichern / aktualisieren</button>
+                  <button id="btnNewTake" type="button">Neuer Take</button>
+                </div>
+              </div>
+
+              <!-- Tabelle rechts -->
+              <div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>In</th>
+                      <th>Out</th>
+                      <th>Bild/Kamera</th>
+                      <th>Sprechertext</th>
+                      <th>Bild</th>
+                    </tr>
+                  </thead>
+                  <tbody id="takesTableBody"></tbody>
+                </table>
+                <p class="muted" style="margin-top:0.4rem;">
+                  Klick auf eine Zeile lädt den Take ins Formular.  
+                  Änderungen werden beim Speichern automatisch im Projekt abgelegt.
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -593,7 +699,7 @@
             </div>
             <div class="card-subtitle">
               Alle Projekte dieses Accounts (lokal gespeichert).  
-              Klick auf ein Projekt öffnet die Detailansicht (Editor-Platzhalter).
+              Klick auf ein Projekt öffnet die Detailansicht mit Editor.
             </div>
             <ul id="openProjectsList" class="projects-list"></ul>
             <div id="openProjectsEmpty" class="muted" style="margin-top:0.4rem;">
@@ -606,17 +712,14 @@
     </div>
   </div>
 </div>
-
 <script>
-  // ---------- kleine Helpers ----------
   const $ = id => document.getElementById(id);
 
   const PROJECTS_KEY_PREFIX = "sb_projects_";
+  const FPS = 25; // Timecode-FPS
 
   function safeKey(email) {
-    return String(email || "")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "_");
+    return String(email || "").toLowerCase().replace(/[^a-z0-9]+/g, "_");
   }
 
   function projectsKey(email) {
@@ -638,9 +741,79 @@
     localStorage.setItem(projectsKey(email), JSON.stringify(projects));
   }
 
-  // ---------- globaler Zustand ----------
+  // Timecode-Helper
+  function parseTimecode(tc) {
+    if (!tc) return null;
+    const parts = tc.split(":").map(p => parseInt(p, 10));
+    if (parts.some(Number.isNaN)) return null;
+
+    let h = 0, m = 0, s = 0, f = 0;
+    if (parts.length === 4) [h, m, s, f] = parts;
+    else if (parts.length === 3) [h, m, s] = parts;
+    else if (parts.length === 2) [m, s] = parts;
+    else return null;
+
+    return ((h * 3600 + m * 60 + s) * FPS + f);
+  }
+
+  function formatTimecode(frames) {
+    if (frames == null || isNaN(frames)) return "";
+    if (frames < 0) frames = 0;
+    const totalSeconds = Math.floor(frames / FPS);
+    const f = frames % FPS;
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    const pad = n => String(n).padStart(2, "0");
+    return `${pad(h)}:${pad(m)}:${pad(s)}:${pad(f)}`;
+  }
+
+  function estimateDurationFromText(text) {
+    if (!text) return 0;
+    const words = text.trim().split(/\s+/).filter(Boolean).length;
+    // ca. 2,7 Wörter / Sekunde
+    return Math.max(1, Math.round(words / 2.7));
+  }
+
+  // Bild auf 1920x1080 skalieren
+  function resizeImageTo1920x1080(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          const targetW = 1920;
+          const targetH = 1080;
+          canvas.width = targetW;
+          canvas.height = targetH;
+          const ctx = canvas.getContext("2d");
+
+          // weißer Hintergrund
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, targetW, targetH);
+
+          const scale = Math.min(targetW / img.width, targetH / img.height);
+          const newW = img.width * scale;
+          const newH = img.height * scale;
+          const dx = (targetW - newW) / 2;
+          const dy = (targetH - newH) / 2;
+          ctx.drawImage(img, dx, dy, newW, newH);
+
+          resolve(canvas.toDataURL("image/jpeg", 0.9));
+        };
+        img.onerror = reject;
+        img.src = reader.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // globaler Zustand
   let currentUser = null;
   let currentProject = null;
+  let editingTakeId = null;
 
   // ---------- Login / Register UI ----------
   function setupLoginUI() {
@@ -685,15 +858,15 @@
           body: JSON.stringify({ email, password })
         });
 
+        const data = await res.json().catch(() => ({}));
+
         if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
           msg.textContent = data.error || "Login fehlgeschlagen.";
           msg.style.color = "#b91c1c";
           return;
         }
 
-        const user = await res.json();
-        currentUser = user;
+        currentUser = data;
         afterLogin();
       } catch (err) {
         console.error(err);
@@ -770,6 +943,17 @@
       list.length + (list.length === 1 ? " Projekt" : " Projekte");
   }
 
+  function persistCurrentProject() {
+    if (!currentUser || !currentProject) return;
+    const list = loadProjects(currentUser.email);
+    const idx = list.findIndex(p => p.id === currentProject.id);
+    if (idx !== -1) {
+      currentProject.updatedAt = new Date().toISOString();
+      list[idx] = currentProject;
+      saveProjects(currentUser.email, list);
+    }
+  }
+
   function renderOpenProjects() {
     if (!currentUser) return;
     const projects = loadProjects(currentUser.email);
@@ -802,8 +986,45 @@
     });
   }
 
+  function resetTakeForm() {
+    editingTakeId = null;
+    $("takeNr").value = "";
+    $("takeIn").value = "";
+    $("takeOut").value = "";
+    $("takeSpeakerText").value = "";
+    $("takePersons").value = "";
+    $("takeCamera").value = "";
+    $("takeMusic").value = "";
+    $("takeSource").value = "";
+    $("takeNotes").value = "";
+    $("takeImageFile").value = "";
+    $("takeImagePreview").innerHTML = "";
+  }
+
+  function fillTakeForm(take) {
+    editingTakeId = take.id;
+    $("takeNr").value = take.nr || "";
+    $("takeIn").value = take.inTc || "";
+    $("takeOut").value = take.outTc || "";
+    $("takeSpeakerText").value = take.speakerText || "";
+    $("takePersons").value = take.persons || "";
+    $("takeCamera").value = take.camera || "";
+    $("takeMusic").value = take.music || "";
+    $("takeSource").value = take.source || "";
+    $("takeNotes").value = take.notes || "";
+    $("takeImageFile").value = "";
+    if (take.imageData) {
+      $("takeImagePreview").innerHTML =
+        `<img src="${take.imageData}" alt="Storyboard" class="thumb">`;
+    } else {
+      $("takeImagePreview").innerHTML = "";
+    }
+  }
+
   function renderProjectView() {
     if (!currentProject) return;
+    currentProject.takes = currentProject.takes || [];
+
     $("projTitle").textContent = currentProject.title || "Ohne Titel";
     const subtitleParts = [];
     if (currentProject.show) subtitleParts.push(currentProject.show);
@@ -816,7 +1037,7 @@
     const addMeta = (label, value) => {
       const div = document.createElement("div");
       div.innerHTML = `
-        <div style="font-size:0.72rem;color:${"#6b7280"};text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.1rem;">
+        <div style="font-size:0.72rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.1rem;">
           ${label}
         </div>
         <div style="font-size:0.85rem;font-weight:500;">${value || "–"}</div>
@@ -830,15 +1051,36 @@
     addMeta("Sendung", currentProject.show);
     addMeta("Format", currentProject.format);
     addMeta("Kurzbeschreibung", currentProject.summary);
+
+    const tbody = $("takesTableBody");
+    tbody.innerHTML = "";
+    currentProject.takes.forEach(t => {
+      const tr = document.createElement("tr");
+      tr.dataset.takeId = t.id;
+      tr.innerHTML = `
+        <td>${t.nr || ""}</td>
+        <td>${t.inTc || ""}</td>
+        <td>${t.outTc || ""}</td>
+        <td>${t.camera || ""}</td>
+        <td>${(t.speakerText || "").slice(0, 60)}${(t.speakerText || "").length > 60 ? "…" : ""}</td>
+        <td>${t.imageData ? "<span>✔︎</span>" : ""}</td>
+      `;
+      tr.addEventListener("click", () => fillTakeForm(t));
+      tbody.appendChild(tr);
+    });
+
+    $("takesInfo").textContent =
+      currentProject.takes.length
+        ? currentProject.takes.length + (currentProject.takes.length === 1 ? " Take" : " Takes")
+        : "Noch keine Takes";
+
+    resetTakeForm();
   }
 
   function setupAppUI() {
     $("logoutButton").addEventListener("click", async () => {
       try {
-        await fetch("/api/logout", {
-          method: "POST",
-          credentials: "include"
-        });
+        await fetch("/api/logout", { method: "POST", credentials: "include" });
       } catch (e) {
         console.warn("Logout-Request fehlgeschlagen", e);
       }
@@ -879,6 +1121,7 @@
         show: $("npShow").value.trim(),
         format: $("npFormat").value.trim(),
         summary: $("npSummary").value.trim(),
+        takes: [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
@@ -911,6 +1154,102 @@
     $("btnCloseOpenProjects").addEventListener("click", () => {
       switchView("viewDashboard");
     });
+
+    // Takes-Buttons
+    $("btnNewTake").addEventListener("click", () => {
+      resetTakeForm();
+    });
+
+    $("btnTakeFromLast").addEventListener("click", () => {
+      if (!currentProject || !currentProject.takes || !currentProject.takes.length) return;
+      const last = currentProject.takes[currentProject.takes.length - 1];
+      if (last.outTc) $("takeIn").value = last.outTc;
+    });
+
+    $("btnEstimateDuration").addEventListener("click", () => {
+      const inTc = $("takeIn").value.trim();
+      const framesIn = parseTimecode(inTc);
+      if (framesIn == null) {
+        alert("Bitte zuerst einen gültigen In-Timecode eingeben (hh:mm:ss:ff).");
+        return;
+      }
+      const text = $("takeSpeakerText").value;
+      const seconds = estimateDurationFromText(text);
+      const framesOut = framesIn + seconds * FPS;
+      $("takeOut").value = formatTimecode(framesOut);
+    });
+
+    $("takeImageFile").addEventListener("change", () => {
+      const file = $("takeImageFile").files && $("takeImageFile").files[0];
+      if (!file) {
+        $("takeImagePreview").innerHTML = "";
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        $("takeImagePreview").innerHTML =
+          `<img src="${reader.result}" alt="Storyboard-Preview" class="thumb">`;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    $("btnSaveTake").addEventListener("click", async () => {
+      if (!currentProject) return;
+      const nr = $("takeNr").value.trim();
+      const inTc = $("takeIn").value.trim();
+      const outTc = $("takeOut").value.trim();
+      const speakerText = $("takeSpeakerText").value.trim();
+
+      if (!nr && !speakerText) {
+        alert("Mindestens Take-Nummer oder Sprechertext angeben.");
+        return;
+      }
+
+      let imageData = null;
+      const fileInput = $("takeImageFile");
+      const file = fileInput.files && fileInput.files[0];
+
+      if (file) {
+        try {
+          imageData = await resizeImageTo1920x1080(file);
+        } catch (e) {
+          console.error("Bildverarbeitung fehlgeschlagen", e);
+          alert("Bild konnte nicht verarbeitet werden.");
+        }
+      }
+
+      const takes = currentProject.takes || [];
+      let take;
+
+      if (editingTakeId) {
+        take = takes.find(t => t.id === editingTakeId);
+        if (!take) {
+          editingTakeId = null;
+        }
+      }
+
+      if (!take) {
+        take = { id: "t_" + Math.random().toString(36).slice(2, 10) };
+        takes.push(take);
+      }
+
+      take.nr = nr;
+      take.inTc = inTc;
+      take.outTc = outTc;
+      take.speakerText = speakerText;
+      take.persons = $("takePersons").value.trim();
+      take.camera = $("takeCamera").value.trim();
+      take.music = $("takeMusic").value.trim();
+      take.source = $("takeSource").value.trim();
+      take.notes = $("takeNotes").value.trim();
+      if (imageData) {
+        take.imageData = imageData;
+      }
+
+      currentProject.takes = takes;
+      persistCurrentProject();
+      renderProjectView();
+    });
   }
 
   function afterLogin() {
@@ -942,5 +1281,3 @@
   setupAppUI();
   tryRestoreSession();
 </script>
-</body>
-</html>
