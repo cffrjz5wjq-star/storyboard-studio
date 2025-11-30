@@ -1,5 +1,5 @@
 // server.js
-// Storyboard Studio – Express-Backend mit Auth (User + Admin)
+// Storyboard Studio – Express-Backend mit Auth (User + Admin) und einfachen Projekten
 
 const express = require("express");
 const path = require("path");
@@ -10,23 +10,34 @@ const { v4: uuidv4 } = require("uuid");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// --- Pfade für Daten ---
+// ----------------------
+// Pfade für Dateien
+// ----------------------
 const DATA_DIR = path.join(__dirname, "data");
 const USERS_FILE = path.join(DATA_DIR, "users.json");
+const PROJECTS_FILE = path.join(DATA_DIR, "projects.json");
 
-// Admin-Zugang (wie gewünscht)
-const ADMIN_USER = "admin";
+// Admin-Zugang
+const ADMIN_LOGIN = "admin";
+const ADMIN_EMAIL = "admin@stefanweichelt.de";
 const ADMIN_PASS = "redcat"; // kleingeschrieben
 
-// sicherstellen, dass Datenordner + Datei existieren
+// ----------------------
+// Datenordner vorbereiten
+// ----------------------
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR);
 }
 if (!fs.existsSync(USERS_FILE)) {
   fs.writeFileSync(USERS_FILE, JSON.stringify({ users: [] }, null, 2), "utf8");
 }
+if (!fs.existsSync(PROJECTS_FILE)) {
+  fs.writeFileSync(PROJECTS_FILE, JSON.stringify({ projects: [] }, null, 2), "utf8");
+}
 
-// Helper zum Lesen/Schreiben der User
+// ----------------------
+// Helper: Users
+// ----------------------
 function loadUsers() {
   try {
     const raw = fs.readFileSync(USERS_FILE, "utf8");
@@ -43,17 +54,43 @@ function saveUsers(users) {
   fs.writeFileSync(USERS_FILE, JSON.stringify(payload, null, 2), "utf8");
 }
 
-// in-memory Sessions: sessionId -> { email, isAdmin }
-const sessions = {};
+// ----------------------
+// Helper: Projekte
+// ----------------------
+function loadProjects() {
+  try {
+    const raw = fs.readFileSync(PROJECTS_FILE, "utf8");
+    const data = JSON.parse(raw);
+    return data.projects || [];
+  } catch (e) {
+    console.error("Konnte projects.json nicht lesen:", e);
+    return [];
+  }
+}
 
-// Middlewares
+function saveProjects(projects) {
+  const payload = { projects };
+  fs.writeFileSync(PROJECTS_FILE, JSON.stringify(payload, null, 2), "utf8");
+}
+
+// ----------------------
+// Sessions (in-memory)
+// ----------------------
+// Achtung: Auf Render werden Sessions bei Neustart gelöscht – für jetzt ok.
+const sessions = {}; // sessionId -> { email, isAdmin }
+
+// ----------------------
+// Middleware
+// ----------------------
 app.use(express.json());
 app.use(cookieParser());
 
 // Statische Dateien aus ./public
 app.use(express.static(path.join(__dirname, "public")));
 
-// --- Auth-Helper ---
+// ----------------------
+// Auth-Helper
+// ----------------------
 function getSession(req) {
   const sid = req.cookies && req.cookies.sb_session;
   if (!sid) return null;
@@ -69,18 +106,26 @@ function requireAuth(req, res, next) {
   next();
 }
 
-// --- API: Registrierung ---
+// ----------------------
+// API: Registrierung
+// ----------------------
 app.post("/api/register", (req, res) => {
-  const { email, password } = req.body || {};
+  const { email, password, name } = req.body || {};
   if (!email || !password) {
     return res.status(400).json({ error: "E-Mail und Passwort erforderlich." });
   }
+
   const normalized = String(email).trim().toLowerCase();
+
+  // Admin-Namen reservieren
+  if (normalized === ADMIN_LOGIN || normalized === ADMIN_EMAIL) {
+    return res.status(400).json({ error: "Diese E-Mail ist reserviert." });
+  }
   if (!normalized.includes("@")) {
     return res.status(400).json({ error: "Bitte eine gültige E-Mail-Adresse verwenden." });
   }
-  if (password.length < 4) {
-    return res.status(400).json({ error: "Passwort muss mindestens 4 Zeichen haben." });
+  if (password.length < 6) {
+    return res.status(400).json({ error: "Passwort muss mindestens 6 Zeichen haben." });
   }
 
   const users = loadUsers();
@@ -89,23 +134,31 @@ app.post("/api/register", (req, res) => {
     return res.status(409).json({ error: "E-Mail ist bereits registriert." });
   }
 
-  const user = { id: uuidv4(), email: normalized, password };
+  const user = {
+    id: uuidv4(),
+    email: normalized,
+    name: name || normalized,
+    password
+  };
   users.push(user);
   saveUsers(users);
 
+  // Session direkt anlegen -> nach Registrierung eingeloggt
   const sessionId = uuidv4();
-  sessions[sessionId] = { email: normalized, isAdmin: false };
+  sessions[sessionId] = { email: user.email, isAdmin: false, name: user.name };
 
   res
     .cookie("sb_session", sessionId, {
       httpOnly: true,
       sameSite: "lax"
-      // secure: true   // bei HTTPS aktivieren
+      // secure: true // bei HTTPS auf eigener Domain aktivieren
     })
-    .json({ email: normalized, isAdmin: false });
+    .json({ email: user.email, isAdmin: false, name: user.name });
 });
 
-// --- API: Login ---
+// ----------------------
+// API: Login
+// ----------------------
 app.post("/api/login", (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) {
@@ -114,16 +167,23 @@ app.post("/api/login", (req, res) => {
 
   const normalized = String(email).trim().toLowerCase();
 
-  // Admin-Spezialfall
-  if (normalized === ADMIN_USER && password === ADMIN_PASS) {
+  // Admin-Spezialfall: akzeptiere "admin" oder "admin@stefanweichelt.de"
+  if (
+    (normalized === ADMIN_LOGIN || normalized === ADMIN_EMAIL) &&
+    password === ADMIN_PASS
+  ) {
     const sessionId = uuidv4();
-    sessions[sessionId] = { email: ADMIN_USER, isAdmin: true };
+    sessions[sessionId] = {
+      email: ADMIN_EMAIL,
+      isAdmin: true,
+      name: "Admin"
+    };
     return res
       .cookie("sb_session", sessionId, {
         httpOnly: true,
         sameSite: "lax"
       })
-      .json({ email: ADMIN_USER, isAdmin: true });
+      .json({ email: ADMIN_EMAIL, isAdmin: true, name: "Admin" });
   }
 
   // normaler User
@@ -134,17 +194,23 @@ app.post("/api/login", (req, res) => {
   }
 
   const sessionId = uuidv4();
-  sessions[sessionId] = { email: normalized, isAdmin: false };
+  sessions[sessionId] = {
+    email: user.email,
+    isAdmin: false,
+    name: user.name || user.email
+  };
 
   res
     .cookie("sb_session", sessionId, {
       httpOnly: true,
       sameSite: "lax"
     })
-    .json({ email: normalized, isAdmin: false });
+    .json({ email: user.email, isAdmin: false, name: user.name || user.email });
 });
 
-// --- API: Logout ---
+// ----------------------
+// API: Logout
+// ----------------------
 app.post("/api/logout", (req, res) => {
   const sid = req.cookies && req.cookies.sb_session;
   if (sid && sessions[sid]) {
@@ -154,24 +220,105 @@ app.post("/api/logout", (req, res) => {
   res.json({ ok: true });
 });
 
-// --- API: aktueller User ---
+// ----------------------
+// API: aktueller User
+// ----------------------
 app.get("/api/me", (req, res) => {
   const session = getSession(req);
   if (!session) return res.status(401).json({ error: "Keine gültige Session." });
   res.json(session);
 });
 
-// Beispiel für spätere Admin-API
+// ----------------------
+// API: Projekte (einfach)
+// ----------------------
+app.get("/api/projects", requireAuth, (req, res) => {
+  const all = loadProjects();
+  const userEmail = req.session.email;
+  const isAdmin = req.session.isAdmin;
+
+  const visible = all.filter(p => {
+    if (isAdmin) return true;
+    if (p.ownerEmail === userEmail) return true;
+    if (Array.isArray(p.collaborators) && p.collaborators.includes(userEmail)) {
+      return true;
+    }
+    return false;
+  });
+
+  res.json({ projects: visible });
+});
+
+app.post("/api/projects", requireAuth, (req, res) => {
+  const { title, editor, cvd, area, show, format, type, lengthMinutes, meta } =
+    req.body || {};
+
+  if (!title) {
+    return res.status(400).json({ error: "Titel ist erforderlich." });
+  }
+
+  const all = loadProjects();
+  const now = new Date().toISOString();
+  const project = {
+    id: uuidv4(),
+    ownerEmail: req.session.email,
+    title,
+    editor: editor || "",
+    cvd: cvd || "",
+    area: area || "",
+    show: show || "",
+    format: format || "",
+    type: type || "Einzelbeitrag",
+    lengthMinutes: lengthMinutes || null,
+    meta: meta || {}, // z.B. zielgruppe, inhalt, besonderheiten
+    collaborators: [],
+    createdAt: now,
+    updatedAt: now
+  };
+
+  all.push(project);
+  saveProjects(all);
+
+  res.status(201).json(project);
+});
+
+app.get("/api/projects/:id", requireAuth, (req, res) => {
+  const id = req.params.id;
+  const all = loadProjects();
+  const project = all.find(p => p.id === id);
+  if (!project) return res.status(404).json({ error: "Projekt nicht gefunden." });
+
+  const userEmail = req.session.email;
+  const isAdmin = req.session.isAdmin;
+
+  if (
+    !isAdmin &&
+    project.ownerEmail !== userEmail &&
+    !(Array.isArray(project.collaborators) && project.collaborators.includes(userEmail))
+  ) {
+    return res.status(403).json({ error: "Kein Zugriff auf dieses Projekt." });
+  }
+
+  res.json(project);
+});
+
+// (später: PUT /api/projects/:id für Updates, Takes etc.)
+
+// ----------------------
+// Admin-API-Beispiel
+// ----------------------
 app.get("/api/admin/users", (req, res) => {
   const session = getSession(req);
   if (!session || !session.isAdmin) {
     return res.status(403).json({ error: "Nur Admin." });
   }
-  const users = loadUsers().map(u => ({ id: u.id, email: u.email }));
+  const users = loadUsers().map(u => ({ id: u.id, email: u.email, name: u.name }));
   res.json({ users });
 });
 
-// Fallback: index.html für alle unbekannten Routen (SPA)
+// ----------------------
+// SPA-Fallback
+// ----------------------
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
