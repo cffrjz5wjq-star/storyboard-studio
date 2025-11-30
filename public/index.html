@@ -5,12 +5,15 @@
   <title>Storyboard Studio</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
 
+  <!-- Mammoth.js für DOCX-Import -->
+  <script src="https://unpkg.com/mammoth/mammoth.browser.min.js"></script>
+
   <style>
     * {
       box-sizing: border-box;
     }
     :root {
-      --bg-page: #e5e7eb;
+      --bg-body: #f3f4f6;
       --bg-card: #ffffff;
       --bg-soft: #f9fafb;
       --border-subtle: #e5e7eb;
@@ -19,29 +22,31 @@
       --text-muted: #6b7280;
       --accent: #f97316;
       --accent-dark: #ea580c;
-      --radius-lg: 1.3rem;
+      --radius-lg: 1.2rem;
       --radius-md: 0.9rem;
       --radius-pill: 999px;
     }
     body {
       margin: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: var(--bg-page);
+      background: var(--bg-body);
       color: var(--text-main);
       min-height: 100vh;
     }
 
-    /* äußerer Rahmen in Grau→Orange */
+    /* App-Rahmen mit Grau→Orange-Verlauf */
     .app-shell {
       min-height: 100vh;
       display: flex;
       align-items: stretch;
       justify-content: center;
-      padding: 1rem;
+      padding: 0.75rem;
     }
-    .app-frame {
+    .app {
       flex: 1;
       max-width: 1400px;
+      display: flex;
+      flex-direction: column;
       border-radius: var(--radius-lg);
       border: 2px solid transparent;
       background-image:
@@ -49,8 +54,6 @@
         linear-gradient(135deg, #9ca3af, var(--accent));
       background-origin: border-box;
       background-clip: padding-box, border-box;
-      display: flex;
-      flex-direction: column;
       overflow: hidden;
     }
 
@@ -85,7 +88,7 @@
       font-size: 1rem;
     }
     .header-subtitle {
-      font-size: 0.8rem;
+      font-size: 0.78rem;
       color: var(--text-muted);
     }
     .header-user {
@@ -100,19 +103,29 @@
       font-weight: 500;
     }
 
+    /* Layout Hauptbereich */
     .main-layout {
-      flex: 1;
       display: flex;
-      background: var(--bg-soft);
-      min-height: 0;
-    }
-
-    .content {
       flex: 1;
-      padding: 1rem 1.2rem 1.2rem;
+      min-height: 0;
+      background: var(--bg-soft);
+    }
+    .sidebar {
+      width: 260px;
+      border-right: 1px solid var(--border-subtle);
+      background: var(--bg-soft);
+      padding: 0.9rem;
       display: flex;
       flex-direction: column;
-      gap: 0.9rem;
+      gap: 0.8rem;
+    }
+    .content {
+      flex: 1;
+      padding: 0.9rem 1.2rem 1.2rem;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      gap: 0.8rem;
       background: var(--bg-card);
     }
 
@@ -120,21 +133,21 @@
       background: var(--bg-card);
       border-radius: var(--radius-md);
       border: 1px solid var(--border-subtle);
-      padding: 0.9rem 1rem;
+      padding: 0.75rem 0.9rem;
       box-shadow: 0 8px 20px rgba(15,23,42,0.03);
     }
     .card-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 0.5rem;
+      margin-bottom: 0.4rem;
     }
     .card-title {
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       font-weight: 600;
     }
     .card-subtitle {
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       color: var(--text-muted);
     }
 
@@ -143,6 +156,7 @@
       font-size: 0.8rem;
     }
 
+    /* Buttons, Inputs */
     button {
       border-radius: var(--radius-pill);
       border: 1px solid var(--border-strong);
@@ -153,9 +167,8 @@
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      justify-content: center;
       gap: 0.35rem;
-      transition: background 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+      transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.1s ease, opacity 0.15s ease;
       white-space: nowrap;
     }
     button.primary {
@@ -175,13 +188,14 @@
     }
     button.full {
       width: 100%;
+      justify-content: center;
     }
     button:hover {
       opacity: 0.94;
       transform: translateY(-0.5px);
     }
 
-    input, textarea {
+    input, select, textarea {
       width: 100%;
       padding: 0.4rem 0.55rem;
       border-radius: 0.8rem;
@@ -190,6 +204,9 @@
       color: var(--text-main);
       font-size: 0.8rem;
       font-family: inherit;
+    }
+    input::placeholder, textarea::placeholder {
+      color: #9ca3af;
     }
     textarea {
       resize: vertical;
@@ -205,99 +222,18 @@
       margin-bottom: 0.55rem;
     }
 
-    .grid-dashboard {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 0.9rem;
-      margin-top: 0.4rem;
-    }
-    .tile {
-      border-radius: 1rem;
-      border: 1px solid var(--border-subtle);
-      background: #ffffff;
-      padding: 0.9rem;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      gap: 0.5rem;
-      box-shadow: 0 10px 26px rgba(15,23,42,0.05);
-    }
-    .tile-title {
-      font-size: 0.95rem;
-      font-weight: 600;
-    }
-    .tile-text {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-    }
-
-    .projects-list {
-      list-style: none;
-      padding: 0;
-      margin: 0.4rem 0 0;
-      display: flex;
-      flex-direction: column;
-      gap: 0.35rem;
-      max-height: 260px;
-      overflow-y: auto;
-    }
-    .projects-list-item {
-      padding: 0.45rem 0.6rem;
-      border-radius: 0.7rem;
-      border: 1px solid var(--border-subtle);
-      display: flex;
-      justify-content: space-between;
+    .pill {
+      display: inline-flex;
       align-items: center;
-      font-size: 0.8rem;
-      background: #ffffff;
-      cursor: pointer;
-    }
-    .projects-list-item:hover {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 1px rgba(249,115,22,0.25);
-    }
-    .badge {
+      padding: 0.15rem 0.55rem;
       border-radius: var(--radius-pill);
-      padding: 0.1rem 0.5rem;
+      border: 1px solid var(--border-subtle);
       font-size: 0.7rem;
-      background: #eff6ff;
-      color: #1d4ed8;
+      color: var(--text-muted);
+      background: var(--bg-soft);
     }
 
-    .two-col {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 0.8rem;
-    }
-
-    /* Tabelle für Takes */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.8rem;
-    }
-    th, td {
-      padding: 0.3rem 0.4rem;
-      border-bottom: 1px solid var(--border-subtle);
-      text-align: left;
-      vertical-align: top;
-    }
-    tbody tr:hover {
-      background: #f9fafb;
-      cursor: pointer;
-    }
-    .thumb {
-      max-width: 120px;
-      max-height: 80px;
-      border-radius: 0.4rem;
-      object-fit: cover;
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
-    /* Login-Overlay */
+    /* Login Overlay */
     .login-overlay {
       position: fixed;
       inset: 0;
@@ -310,12 +246,12 @@
     }
     .login-card {
       width: 100%;
-      max-width: 460px;
+      max-width: 480px;
       background: #ffffff;
       border-radius: 1.3rem;
       border: 1px solid rgba(148,163,184,0.6);
       box-shadow: 0 24px 70px rgba(15,23,42,0.4);
-      padding: 1.7rem 1.6rem 1.4rem;
+      padding: 1.8rem 1.7rem 1.5rem;
       display: flex;
       flex-direction: column;
       gap: 0.8rem;
@@ -361,7 +297,7 @@
       box-shadow: 0 6px 16px rgba(15,23,42,0.12);
     }
     .login-banner {
-      margin-top: 0.3rem;
+      margin-top: 0.4rem;
       padding: 0.55rem 0.6rem;
       border-radius: 0.85rem;
       border: 1px dashed #fed7aa;
@@ -378,20 +314,169 @@
       color: var(--text-muted);
     }
 
+    /* Projekt-Hub */
+    .hub-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 0.9rem;
+      margin-top: 0.4rem;
+    }
+    .hub-tile {
+      border-radius: 1rem;
+      border: 1px solid var(--border-subtle);
+      background: #ffffff;
+      padding: 0.9rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 0.6rem;
+      box-shadow: 0 10px 26px rgba(15,23,42,0.06);
+    }
+    .hub-tile-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+    .hub-tile-text {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .project-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.5rem 1.2rem;
+      font-size: 0.8rem;
+    }
+    .project-meta-label {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.1rem;
+    }
+    .project-meta-value {
+      font-weight: 500;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 0.2rem;
+    }
+    .toolbar-left, .toolbar-right {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      align-items: center;
+    }
+
+    .section-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 0.3rem;
+    }
+
+    .import-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      align-items: center;
+    }
+
+    .projects-list {
+      list-style: none;
+      padding: 0;
+      margin: 0.3rem 0 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+    .projects-list-item {
+      padding: 0.4rem 0.5rem;
+      border-radius: 0.6rem;
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      background: #ffffff;
+      cursor: pointer;
+    }
+    .projects-list-item:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(249,115,22,0.25);
+    }
+    .badge {
+      border-radius: var(--radius-pill);
+      padding: 0.1rem 0.5rem;
+      font-size: 0.7rem;
+      background: #eff6ff;
+      color: #1d4ed8;
+    }
+
+    /* Tabelle für Takes */
+    .table-wrapper {
+      margin-top: 0.4rem;
+      border-radius: 0.8rem;
+      border: 1px solid var(--border-subtle);
+      overflow: auto;
+      max-height: 420px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.78rem;
+      background: #ffffff;
+    }
+    thead {
+      background: #f9fafb;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    th, td {
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 0.3rem 0.4rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      font-weight: 600;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    td input, td textarea {
+      width: 100%;
+      font-size: 0.75rem;
+      padding: 0.25rem 0.3rem;
+      border-radius: 0.5rem;
+    }
+    td textarea {
+      min-height: 38px;
+    }
+
+    .hidden { display: none !important; }
+
     @media (max-width: 900px) {
-      .app-shell {
-        padding: 0;
+      .sidebar {
+        display: none;
       }
-      .app-frame {
+      .content {
+        padding-inline: 0.8rem;
+      }
+      .app {
         border-radius: 0;
       }
     }
   </style>
 </head>
 <body>
-
-<!-- LOGIN -->
-<div id="loginOverlay" class="login-overlay">
+  <div id="loginOverlay" class="login-overlay">
   <div class="login-card">
     <div class="login-header">
       <div class="logo-badge">SB</div>
@@ -400,8 +485,7 @@
           Storyboard <span class="login-highlight">Studio</span>
         </div>
         <div class="login-subtitle">
-          Anmeldung und Registrierung mit Backend.  
-          E-Mail als Benutzername.
+          Melde dich an oder registriere dich, um Projekte anzulegen und Storyboards zu planen.
         </div>
       </div>
     </div>
@@ -411,7 +495,6 @@
       <button id="tabRegister" class="login-tab" type="button">Registrieren</button>
     </div>
 
-    <!-- Login-Form -->
     <div id="loginForm">
       <div class="field">
         <label for="loginEmail">E-Mail</label>
@@ -424,39 +507,44 @@
       <button id="loginButton" class="primary full" type="button">Anmelden</button>
     </div>
 
-    <!-- Registrieren-Form -->
     <div id="registerForm" class="hidden">
+      <div class="field">
+        <label for="regName">Name</label>
+        <input id="regName" type="text" placeholder="Vollständiger Name">
+      </div>
       <div class="field">
         <label for="regEmail">E-Mail</label>
         <input id="regEmail" type="email" placeholder="du@example.com">
       </div>
       <div class="field">
         <label for="regPassword">Passwort</label>
-        <input id="regPassword" type="password" placeholder="Mindestens 6 Zeichen">
+        <input id="regPassword" type="password" placeholder="Mindestens 8 Zeichen">
       </div>
       <button id="registerButton" class="primary full" type="button">Registrieren</button>
     </div>
 
     <div class="login-banner">
-      Test-Admin: <strong>admin</strong> / <strong>redcat</strong> (wie in <code>server.js</code>).  
-      Normale User registrieren sich mit E-Mail.
+      Standard-Admin für Tests: <strong>admin@stefanweichelt.de</strong> / <strong>redcat</strong>.
+      Weitere Accounts kannst du über die Registrierung anlegen.
     </div>
 
     <div class="login-footer">
       <span id="loginMessage"></span>
-      <span class="muted">Version 0.3 – Dashboard & Takes</span>
+      <span class="muted">Version 0.2 – Projekte & Takes (lokal)</span>
     </div>
   </div>
 </div>
 
 <div class="app-shell">
-  <div class="app-frame hidden" id="app">
+  <div class="app hidden" id="app">
     <header>
       <div class="header-left">
         <div class="logo-badge">SB</div>
         <div>
           <div class="header-title">Storyboard Studio</div>
-          <div class="header-subtitle" id="headerSubtitle">Dashboard</div>
+          <div class="header-subtitle" id="headerSubtitle">
+            Projektübersicht
+          </div>
         </div>
       </div>
       <div class="header-user">
@@ -466,357 +554,534 @@
     </header>
 
     <div class="main-layout">
+      <aside class="sidebar">
+        <div class="card">
+          <div class="card-title">Aktuelles Projekt</div>
+          <div class="muted" id="sidebarProjectInfo">
+            Noch kein Projekt ausgewählt.
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Projekte</div>
+          <div class="muted">Schnellzugriff auf vorhandene Projekte.</div>
+          <ul id="sidebarProjects" class="projects-list"></ul>
+        </div>
+      </aside>
+
       <main class="content">
-        <!-- DASHBOARD -->
-        <section id="viewDashboard">
+        <!-- HUB VIEW -->
+        <section id="viewHub">
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">Projekt-Dashboard</div>
+                <div class="card-title">Willkommen im Projektbereich</div>
                 <div class="card-subtitle">
-                  Wähle, ob du ein neues Projekt anlegen oder ein bestehendes öffnen möchtest.
+                  Lege ein neues Projekt an oder öffne eines deiner bestehenden Projekte.
                 </div>
               </div>
-              <span class="muted" id="dashboardProjectCount">0 Projekte</span>
+              <span class="pill" id="projectCountBadge">0 Projekte</span>
             </div>
 
-            <div class="grid-dashboard">
-              <article class="tile">
+            <div class="hub-grid">
+              <article class="hub-tile">
                 <div>
-                  <div class="tile-title">Neues Projekt anlegen</div>
-                  <div class="tile-text">
-                    Stammdaten anlegen (Titel, Redaktion, Bereich, Sendung, Format).
+                  <div class="hub-tile-title">Neues Projekt anlegen</div>
+                  <div class="hub-tile-text">
+                    Titel, Redaktion, CVD, Bereich und Format definieren – danach kannst du Drehbücher importieren und Storyboards planen.
                   </div>
                 </div>
-                <button id="btnNewProject" class="primary" type="button">+ Neues Projekt</button>
+                <button id="btnNewProject" class="primary" type="button">
+                  + Neues Projekt
+                </button>
               </article>
 
-              <article class="tile">
+              <article class="hub-tile">
                 <div>
-                  <div class="tile-title">Projekte öffnen</div>
-                  <div class="tile-text">
-                    Alle bestehenden Projekte dieses Accounts in einer Liste anzeigen.
+                  <div class="hub-tile-title">Projekt öffnen</div>
+                  <div class="hub-tile-text">
+                    Wähle eines deiner bereits gespeicherten Projekte aus und arbeite dort weiter.
                   </div>
                 </div>
-                <button id="btnOpenProjects" type="button">Projekte anzeigen</button>
+                <button id="btnOpenProject" type="button">
+                  Projekte anzeigen
+                </button>
               </article>
 
-              <article class="tile">
+              <article class="hub-tile">
                 <div>
-                  <div class="tile-title">Mitarbeitende einladen</div>
-                  <div class="tile-text">
-                    Geplant: Kolleginnen und Kollegen einladen und Projekte teilen.
+                  <div class="hub-tile-title">Mitarbeitende einladen</div>
+                  <div class="hub-tile-text">
+                    Später kannst du hier Team-Members hinzufügen, Zugriffsrechte steuern und Projekte teilen.
+                    Aktuell ist diese Funktion noch in Planung.
                   </div>
                 </div>
-                <button type="button" class="ghost small" disabled>In Planung</button>
+                <span class="badge">Coming soon</span>
               </article>
 
-              <article class="tile">
+              <article class="hub-tile">
                 <div>
-                  <div class="tile-title">Einstellungen & Branding</div>
-                  <div class="tile-text">
-                    Logo, Hinweise und Voreinstellungen für neue Projekte.
+                  <div class="hub-tile-title">Einstellungen & Logos</div>
+                  <div class="hub-tile-text">
+                    Hier kannst du später Logos, Sender-Branding und Standardtexte für Exporte konfigurieren.
                   </div>
                 </div>
-                <button type="button" class="ghost small" disabled>Folgt später</button>
+                <span class="badge">Admin-Bereich</span>
               </article>
             </div>
           </div>
         </section>
 
-        <!-- NEUES PROJEKT -->
+        <!-- NEW PROJECT VIEW -->
         <section id="viewNewProject" class="hidden">
           <div class="card">
             <div class="card-header">
               <div class="card-title">Neues Projekt anlegen</div>
-              <button id="btnBackFromNew" class="ghost small" type="button">Zurück zum Dashboard</button>
+              <button id="btnNewProjectBack" class="ghost small" type="button">
+                Zurück zur Übersicht
+              </button>
             </div>
             <div class="card-subtitle">
-              Nur die wichtigsten Stammdaten – alles Weitere kommt später im Editor.
+              Zunächst nur die wichtigsten Stammdaten – später können weitere Infos ergänzt werden.
             </div>
 
-            <div style="margin-top:0.6rem; max-width: 720px;">
-              <div class="two-col">
-                <div>
-                  <div class="field">
-                    <label for="npTitle">Titel / Projektname</label>
-                    <input id="npTitle" type="text" placeholder="z.B. FWU – Akkumulatoren">
-                  </div>
-                  <div class="field">
-                    <label for="npEditor">Redaktion</label>
-                    <input id="npEditor" type="text" placeholder="Name der Redaktion">
-                  </div>
-                  <div class="field">
-                    <label for="npCvd">CVD</label>
-                    <input id="npCvd" type="text" placeholder="Chefin / Chef vom Dienst">
-                  </div>
-                </div>
-                <div>
-                  <div class="field">
-                    <label for="npArea">Bereich</label>
-                    <input id="npArea" type="text" placeholder="Physik, Chemie, Umwelt …">
-                  </div>
-                  <div class="field">
-                    <label for="npShow">Sendung / Reihe</label>
-                    <input id="npShow" type="text" placeholder="Galileo, FWU, Unterrichtsreihe …">
-                  </div>
-                  <div class="field">
-                    <label for="npFormat">Format</label>
-                    <input id="npFormat" type="text" placeholder="Magazin, Unterrichtsfilm, Social-Clip">
-                  </div>
-                </div>
-              </div>
-
+            <div style="margin-top:0.6rem; max-width: 620px;">
               <div class="field">
-                <label for="npSummary">Kurzbeschreibung / Exposé (optional)</label>
-                <textarea id="npSummary" placeholder="Worum geht es? Zielgruppe, Lernziele, Besonderheiten …"></textarea>
+                <label for="npTitle">Titel / Projektname</label>
+                <input id="npTitle" type="text" placeholder="z.B. Galileo – Quantenphysik Spezial">
+              </div>
+              <div class="field">
+                <label for="npEditor">Redakteur&nbsp;/&nbsp;Redakteurin</label>
+                <input id="npEditor" type="text" placeholder="Name der Redaktion">
+              </div>
+              <div class="field">
+                <label for="npCvd">CVD</label>
+                <input id="npCvd" type="text" placeholder="Chefin / Chef vom Dienst">
+              </div>
+              <div class="field">
+                <label for="npArea">Bereich</label>
+                <input id="npArea" type="text" placeholder="z.B. Naturwissenschaft, Physik, Chemie …">
+              </div>
+              <div class="field">
+                <label for="npShow">Sendung</label>
+                <input id="npShow" type="text" placeholder="z.B. Galileo, taff, Wissen macht Ah!">
+              </div>
+              <div class="field">
+                <label for="npFormat">Format</label>
+                <input id="npFormat" type="text" placeholder="z.B. Magazinbeitrag, Unterrichtsfilm, Social-Clip">
               </div>
 
-              <div style="margin-top:0.5rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
-                <button id="btnCreateProject" class="primary" type="button">Projekt speichern</button>
-                <button id="btnCancelNew" type="button">Abbrechen</button>
+              <div style="margin-top:0.7rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+                <button id="btnCreateProject" class="primary" type="button">Projekt anlegen</button>
+                <button id="btnCancelNewProject" type="button">Abbrechen</button>
               </div>
               <div id="newProjectMessage" class="muted" style="margin-top:0.4rem;"></div>
             </div>
           </div>
         </section>
 
-        <!-- PROJEKTDETAIL + TAKE-EDITOR -->
+        <!-- PROJECT DETAIL VIEW -->
         <section id="viewProject" class="hidden">
-          <!-- Meta-Karte -->
           <div class="card">
             <div class="card-header">
               <div>
                 <div class="card-title" id="projTitle"></div>
                 <div class="card-subtitle" id="projSubtitle"></div>
               </div>
-              <button id="btnBackFromProject" class="ghost small" type="button">
-                Zurück zum Dashboard
+              <button id="btnBackToHubFromProject" class="ghost small" type="button">
+                Zur Projektübersicht
               </button>
             </div>
 
-            <div class="two-col" id="projMeta"></div>
-          </div>
-
-          <!-- Editor-Karte -->
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title">Takes, Timecodes & Storyboard</div>
-              <span class="muted" id="takesInfo">Noch keine Takes</span>
+            <!-- Stammdaten EDITIERBAR -->
+            <div class="project-meta-grid" id="projMetaForm">
+              <div>
+                <div class="project-meta-label">Redaktion</div>
+                <input id="peEditor" type="text" />
+              </div>
+              <div>
+                <div class="project-meta-label">CVD</div>
+                <input id="peCvd" type="text" />
+              </div>
+              <div>
+                <div class="project-meta-label">Bereich</div>
+                <input id="peArea" type="text" />
+              </div>
+              <div>
+                <div class="project-meta-label">Sendung</div>
+                <input id="peShow" type="text" />
+              </div>
+              <div>
+                <div class="project-meta-label">Format</div>
+                <input id="peFormat" type="text" />
+              </div>
+              <div>
+                <div class="project-meta-label">Kurzbeschreibung</div>
+                <input id="peShort" type="text" placeholder="Kurze Inhaltsangabe" />
+              </div>
             </div>
 
-            <div class="two-col">
-              <!-- Formular links -->
-              <div>
-                <div class="field">
-                  <label for="takeNr">Take-Nummer</label>
-                  <input id="takeNr" type="text" placeholder="z.B. 1, 1a, 2 …">
-                </div>
-                <div class="field">
-                  <label>Timecode In / Out (hh:mm:ss:ff)</label>
-                  <div style="display:flex; gap:0.4rem;">
-                    <input id="takeIn" type="text" placeholder="00:00:00:00">
-                    <input id="takeOut" type="text" placeholder="00:00:05:00">
-                  </div>
-                  <div style="margin-top:0.3rem; display:flex; gap:0.4rem; flex-wrap:wrap;">
-                    <button id="btnTakeFromLast" class="small" type="button">
-                      In = letzter Out
-                    </button>
-                    <button id="btnEstimateDuration" class="small" type="button">
-                      Out aus Sprechertext schätzen
-                    </button>
-                  </div>
-                </div>
-
-                <div class="field">
-                  <label for="takeSpeakerText">Sprechertext / Dialog</label>
-                  <textarea id="takeSpeakerText" placeholder="Gesprochener Text für diesen Take …"></textarea>
-                </div>
-
-                <div class="field">
-                  <label for="takePersons">Personen</label>
-                  <input id="takePersons" type="text" placeholder="Moderation, Off, Interviewpartner …">
-                </div>
-                <div class="field">
-                  <label for="takeCamera">Bild / Kamera</label>
-                  <input id="takeCamera" type="text" placeholder="Totale, Halbtotale, Detail, Dolly, Drone …">
-                </div>
-                <div class="field">
-                  <label for="takeMusic">Musik</label>
-                  <input id="takeMusic" type="text" placeholder="Track, Komponist, Library, Stimmung …">
-                </div>
-                <div class="field">
-                  <label for="takeSource">Herkunft / Bildnachweis</label>
-                  <input id="takeSource" type="text" placeholder="Agentur, Archiv, Eigenmaterial …">
-                </div>
-                <div class="field">
-                  <label for="takeNotes">Notizen</label>
-                  <textarea id="takeNotes" placeholder="Besonderheiten, Regiehinweise, VFX, KI-Prompts …"></textarea>
-                </div>
-
-                <div class="field">
-                  <label for="takeImageFile">Storyboard-Bild (max. 1920×1080)</label>
-                  <input id="takeImageFile" type="file" accept="image/*">
-                  <div id="takeImagePreview" style="margin-top:0.4rem;"></div>
-                </div>
-
-                <div style="margin-top:0.4rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
-                  <button id="btnSaveTake" class="primary" type="button">Take speichern / aktualisieren</button>
-                  <button id="btnNewTake" type="button">Neuer Take</button>
-                </div>
+            <div class="toolbar">
+              <div class="toolbar-left">
+                <span class="pill">Projekt-ID: <span id="projIdShort"></span></span>
               </div>
-
-              <!-- Tabelle rechts -->
-              <div>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>In</th>
-                      <th>Out</th>
-                      <th>Bild/Kamera</th>
-                      <th>Sprechertext</th>
-                      <th>Bild</th>
-                    </tr>
-                  </thead>
-                  <tbody id="takesTableBody"></tbody>
-                </table>
-                <p class="muted" style="margin-top:0.4rem;">
-                  Klick auf eine Zeile lädt den Take ins Formular.  
-                  Änderungen werden beim Speichern automatisch im Projekt abgelegt.
-                </p>
+              <div class="toolbar-right">
+                <button id="btnProjectWordImport" class="small" type="button">DOCX importieren</button>
+                <button id="btnAddTake" class="small" type="button">+ neuer Take</button>
+                <button id="btnExportCsv" class="small" type="button">Export Tabelle (CSV)</button>
+                <button id="btnProjectSave" class="primary small" type="button">Projekt speichern</button>
               </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="section-title">Drehbuch & Takes</div>
+            <p class="muted">
+              Hier kannst du Takes / Szenen, Timecodes, Personen und Bilder bearbeiten oder aus einem Word-Dokument importieren.
+            </p>
+
+            <div class="field">
+              <label for="docxFile">Word-Dokument (.docx) für Takes-Import</label>
+              <div class="import-row">
+                <input id="docxFile" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+                <button id="btnImportDocx" class="small" type="button">DOCX analysieren</button>
+              </div>
+              <div id="docxInfo" class="muted" style="margin-top:0.35rem;">
+                Tipp: Beste Ergebnisse bekommst du, wenn dein Word-Dokument Tabellen mit Spalten wie
+                „Film“, „Take“, „Bild/Kamera“, „Sprechertext“, „Notizen“ enthält. Wir können die
+                Erkennung später an dein Standardlayout anpassen.
+              </div>
+            </div>
+
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Film</th>
+                    <th>Take</th>
+                    <th>In</th>
+                    <th>Out</th>
+                    <th>Bild/Kamera</th>
+                    <th>Sprechertext</th>
+                    <th>Personen</th>
+                    <th>Notizen</th>
+                    <th>Musik</th>
+                    <th>Herkunft</th>
+                  </tr>
+                </thead>
+                <tbody id="takesTableBody"></tbody>
+              </table>
+            </div>
+
+            <div class="field" style="margin-top:0.6rem;">
+              <label for="projectNotes">Allgemeine Projekt-Notizen</label>
+              <textarea id="projectNotes" placeholder="Allgemeine Hinweise, besondere Anforderungen, Ansprechpartner …"></textarea>
             </div>
           </div>
         </section>
 
-        <!-- PROJEKTLISTE (Projekte öffnen) -->
+        <!-- OPEN PROJECTS VIEW -->
         <section id="viewOpenProjects" class="hidden">
           <div class="card">
             <div class="card-header">
-              <div class="card-title">Projekt auswählen</div>
+              <div class="card-title">Projekt öffnen</div>
               <button id="btnCloseOpenProjects" class="ghost small" type="button">Schließen</button>
             </div>
             <div class="card-subtitle">
-              Alle Projekte dieses Accounts (lokal gespeichert).  
-              Klick auf ein Projekt öffnet die Detailansicht mit Editor.
+              Wähle eines deiner gespeicherten Projekte aus. Die Liste ist benutzerspezifisch.
             </div>
             <ul id="openProjectsList" class="projects-list"></ul>
             <div id="openProjectsEmpty" class="muted" style="margin-top:0.4rem;">
-              Noch keine Projekte angelegt.
+              Noch keine Projekte – lege zuerst ein neues Projekt an.
             </div>
           </div>
         </section>
-
       </main>
     </div>
   </div>
 </div>
+
 <script>
-  const $ = id => document.getElementById(id);
-
-  const PROJECTS_KEY_PREFIX = "sb_projects_";
-  const FPS = 25; // Timecode-FPS
-
-  function safeKey(email) {
-    return String(email || "").toLowerCase().replace(/[^a-z0-9]+/g, "_");
+  /* === Hilfsfunktionen === */
+  function $(id) {
+    return document.getElementById(id);
   }
+  function show(el) { el.classList.remove("hidden"); }
+  function hide(el) { el.classList.add("hidden"); }
 
-  function projectsKey(email) {
-    return PROJECTS_KEY_PREFIX + safeKey(email);
-  }
-
-  function loadProjects(email) {
+  function loadJSON(key, fallback) {
     try {
-      const raw = localStorage.getItem(projectsKey(email));
-      if (!raw) return [];
+      const raw = localStorage.getItem(key);
+      if (!raw) return fallback;
       return JSON.parse(raw);
     } catch (e) {
-      console.error("Projekte laden fehlgeschlagen", e);
-      return [];
+      console.error("JSON laden fehlgeschlagen", key, e);
+      return fallback;
+    }
+  }
+  function saveJSON(key, value) {
+    localStorage.setItem(key, JSON.stringify(value));
+  }
+  function safeKey(str) {
+    return String(str || "").toLowerCase().replace(/[^a-z0-9]+/g, "_");
+  }
+  function generateId() {
+    return "p_" + Math.random().toString(36).slice(2, 10);
+  }
+
+  /* === Nutzerverwaltung (lokal) === */
+  const USERS_KEY = "sb_users";
+  const SESSION_KEY = "sb_session";
+
+  function getUsers() {
+    return loadJSON(USERS_KEY, []);
+  }
+  function saveUsers(users) {
+    saveJSON(USERS_KEY, users);
+  }
+  function findUserByEmail(email) {
+    const users = getUsers();
+    return users.find(u => u.email.toLowerCase() === String(email).toLowerCase());
+  }
+  function createDefaultAdminIfNeeded() {
+    let users = getUsers();
+    if (!users.some(u => u.email === "admin@stefanweichelt.de")) {
+      users.push({
+        id: "admin",
+        name: "Admin",
+        email: "admin@stefanweichelt.de",
+        password: "redcat",
+        createdAt: new Date().toISOString(),
+        isAdmin: true
+      });
+      saveUsers(users);
+    }
+  }
+  function saveSession(user) {
+    saveJSON(SESSION_KEY, {
+      email: user.email,
+      name: user.name,
+      isAdmin: !!user.isAdmin,
+      loggedInAt: new Date().toISOString()
+    });
+  }
+  function getSession() {
+    return loadJSON(SESSION_KEY, null);
+  }
+  function clearSession() {
+    localStorage.removeItem(SESSION_KEY);
+  }
+
+  /* === Projekte (pro User) === */
+  function projectsKeyForUser(email) {
+    return "sb_projects_" + safeKey(email);
+  }
+  function getProjectsFor(email) {
+    return loadJSON(projectsKeyForUser(email), []);
+  }
+  function saveProjectsFor(email, projects) {
+    saveJSON(projectsKeyForUser(email), projects);
+  }
+
+  /* === UI-State === */
+  let currentUser = null;
+  let currentProject = null;
+
+  function updateHeader() {
+    if (!currentUser) return;
+    $("headerUserName").textContent = currentUser.name + " (" + currentUser.email + ")";
+  }
+
+  function updateProjectBadges() {
+    if (!currentUser) return;
+    const projects = getProjectsFor(currentUser.email);
+    $("projectCountBadge").textContent =
+      projects.length + (projects.length === 1 ? " Projekt" : " Projekte");
+
+    const sidebar = $("sidebarProjects");
+    sidebar.innerHTML = "";
+    projects.forEach(p => {
+      const li = document.createElement("li");
+      li.className = "projects-list-item";
+      li.innerHTML = `
+        <div>
+          <div>${p.title || "Ohne Titel"}</div>
+          <div class="muted">${p.show || ""}</div>
+        </div>
+        <span class="badge">${(p.area || "Allgemein").slice(0,18)}</span>
+      `;
+      li.addEventListener("click", () => openProject(p));
+      sidebar.appendChild(li);
+    });
+
+    $("sidebarProjectInfo").textContent = currentProject
+      ? (currentProject.title || "Ohne Titel")
+      : "Noch kein Projekt ausgewählt.";
+  }
+
+  function switchView(name) {
+    const views = ["viewHub", "viewNewProject", "viewProject", "viewOpenProjects"];
+    views.forEach(id => {
+      const el = $(id);
+      if (!el) return;
+      if (id === name) show(el); else hide(el);
+    });
+    if (name === "viewHub") {
+      $("headerSubtitle").textContent = "Projektübersicht";
+    } else if (name === "viewNewProject") {
+      $("headerSubtitle").textContent = "Neues Projekt anlegen";
+    } else if (name === "viewProject") {
+      $("headerSubtitle").textContent = "Projekt bearbeiten";
+    } else if (name === "viewOpenProjects") {
+      $("headerSubtitle").textContent = "Projekt auswählen";
     }
   }
 
-  function saveProjects(email, projects) {
-    localStorage.setItem(projectsKey(email), JSON.stringify(projects));
+  function saveCurrentProject() {
+    if (!currentUser || !currentProject) return;
+    const projects = getProjectsFor(currentUser.email).map(p =>
+      p.id === currentProject.id ? currentProject : p
+    );
+    saveProjectsFor(currentUser.email, projects);
   }
 
-  // Timecode-Helper
-  function parseTimecode(tc) {
-    if (!tc) return null;
-    const parts = tc.split(":").map(p => parseInt(p, 10));
-    if (parts.some(Number.isNaN)) return null;
-
-    let h = 0, m = 0, s = 0, f = 0;
-    if (parts.length === 4) [h, m, s, f] = parts;
-    else if (parts.length === 3) [h, m, s] = parts;
-    else if (parts.length === 2) [m, s] = parts;
-    else return null;
-
-    return ((h * 3600 + m * 60 + s) * FPS + f);
+  function openProject(p) {
+    currentProject = Object.assign(
+      { takes: [], shortDesc: "" },
+      p,
+      { takes: p.takes || [] }
+    );
+    renderProjectView();
+    updateProjectBadges();
+    switchView("viewProject");
   }
 
-  function formatTimecode(frames) {
-    if (frames == null || isNaN(frames)) return "";
-    if (frames < 0) frames = 0;
-    const totalSeconds = Math.floor(frames / FPS);
-    const f = frames % FPS;
-    const h = Math.floor(totalSeconds / 3600);
-    const m = Math.floor((totalSeconds % 3600) / 60);
-    const s = totalSeconds % 60;
-    const pad = n => String(n).padStart(2, "0");
-    return `${pad(h)}:${pad(m)}:${pad(s)}:${pad(f)}`;
+  function renderProjectView() {
+    if (!currentProject) return;
+
+    $("projTitle").textContent = currentProject.title || "Ohne Titel";
+    const subtitleParts = [];
+    if (currentProject.show) subtitleParts.push(currentProject.show);
+    if (currentProject.format) subtitleParts.push(currentProject.format);
+    $("projSubtitle").textContent = subtitleParts.join(" · ");
+
+    $("projIdShort").textContent = currentProject.id || "-";
+
+    $("peEditor").value = currentProject.editor || "";
+    $("peCvd").value    = currentProject.cvd || "";
+    $("peArea").value   = currentProject.area || "";
+    $("peShow").value   = currentProject.show || "";
+    $("peFormat").value = currentProject.format || "";
+    $("peShort").value  = currentProject.shortDesc || "";
+
+    $("projectNotes").value = currentProject.notes || "";
+
+    renderTakesTable();
   }
 
-  function estimateDurationFromText(text) {
-    if (!text) return 0;
-    const words = text.trim().split(/\s+/).filter(Boolean).length;
-    // ca. 2,7 Wörter / Sekunde
-    return Math.max(1, Math.round(words / 2.7));
-  }
+  function renderTakesTable() {
+    const tbody = $("takesTableBody");
+    tbody.innerHTML = "";
+    if (!currentProject) return;
+    const takes = currentProject.takes || [];
+    takes.forEach((t, index) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><input value="${t.film || ""}" data-field="film" data-index="${index}"></td>
+        <td><input value="${t.take || ""}" data-field="take" data-index="${index}"></td>
+        <td><input value="${t.in || ""}" data-field="in" data-index="${index}"></td>
+        <td><input value="${t.out || ""}" data-field="out" data-index="${index}"></td>
+        <td><textarea data-field="camera" data-index="${index}">${t.camera || ""}</textarea></td>
+        <td><textarea data-field="speaker" data-index="${index}">${t.speaker || ""}</textarea></td>
+        <td><textarea data-field="persons" data-index="${index}">${t.persons || ""}</textarea></td>
+        <td><textarea data-field="notes" data-index="${index}">${t.notes || ""}</textarea></td>
+        <td><textarea data-field="music" data-index="${index}">${t.music || ""}</textarea></td>
+        <td><textarea data-field="source" data-index="${index}">${t.source || ""}</textarea></td>
+      `;
+      tbody.appendChild(tr);
+    });
 
-  // Bild auf 1920x1080 skalieren
-  function resizeImageTo1920x1080(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-          const targetW = 1920;
-          const targetH = 1080;
-          canvas.width = targetW;
-          canvas.height = targetH;
-          const ctx = canvas.getContext("2d");
-
-          // weißer Hintergrund
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, targetW, targetH);
-
-          const scale = Math.min(targetW / img.width, targetH / img.height);
-          const newW = img.width * scale;
-          const newH = img.height * scale;
-          const dx = (targetW - newW) / 2;
-          const dy = (targetH - newH) / 2;
-          ctx.drawImage(img, dx, dy, newW, newH);
-
-          resolve(canvas.toDataURL("image/jpeg", 0.9));
-        };
-        img.onerror = reject;
-        img.src = reader.result;
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
+    // Änderungen live in currentProject übernehmen
+    tbody.querySelectorAll("input,textarea").forEach(el => {
+      el.addEventListener("input", () => {
+        const idx = Number(el.dataset.index);
+        const field = el.dataset.field;
+        if (!currentProject.takes[idx]) return;
+        currentProject.takes[idx][field] = el.value;
+      });
     });
   }
 
-  // globaler Zustand
-  let currentUser = null;
-  let currentProject = null;
-  let editingTakeId = null;
+  /* === DOCX-Parsing === */
+  function parseDocxHtmlToTakes(html) {
+    const container = document.createElement("div");
+    container.innerHTML = html;
+    const takes = [];
 
-  // ---------- Login / Register UI ----------
-  function setupLoginUI() {
+    const tables = container.querySelectorAll("table");
+    if (tables.length) {
+      tables.forEach(table => {
+        const rows = table.querySelectorAll("tr");
+        rows.forEach((row, idx) => {
+          const cells = Array.from(row.querySelectorAll("th,td"))
+            .map(c => c.textContent.trim());
+          const joined = cells.join("").trim();
+          if (!joined) return;
+
+          // Header-Zeile überspringen
+          if (idx === 0 && !/^\d+/.test(cells[0]) && !/film/i.test(cells[0])) return;
+
+          const cell0 = cells[0] || "";
+          const filmMatch = cell0.match(/film\s*(\d+)/i);
+          const film = filmMatch ? "Film " + filmMatch[1] : (cell0.match(/film/i) ? cell0 : "");
+          const take = (cell0.replace(/film\s*\d+/i, "").trim()) || "";
+
+          takes.push({
+            film,
+            take: take || String(takes.length + 1),
+            in: "",
+            out: "",
+            camera: cells[1] || "",
+            speaker: cells[2] || "",
+            persons: cells[3] || "",
+            notes: cells[4] || "",
+            music: cells[5] || "",
+            source: cells[6] || ""
+          });
+        });
+      });
+      return takes;
+    }
+
+    // Fallback: Absätze sequentiell als Takes
+    let currentFilm = "Film 1";
+    const paras = container.querySelectorAll("p");
+    paras.forEach(p => {
+      const text = p.textContent.trim();
+      if (!text) return;
+      const m = text.match(/film\s*(\d+)/i);
+      if (m) {
+        currentFilm = "Film " + m[1];
+        return;
+      }
+      takes.push({
+        film: currentFilm,
+        take: String(takes.length + 1),
+        in: "",
+        out: "",
+        camera: "",
+        speaker: text,
+        persons: "",
+        notes: "",
+        music: "",
+        source: ""
+      });
+    });
+    return takes;
+  }
+
+  /* === Login-UI === */
+  function setupLoginUi() {
     const tabLogin = $("tabLogin");
     const tabRegister = $("tabRegister");
     const loginForm = $("loginForm");
@@ -826,147 +1091,272 @@
     tabLogin.addEventListener("click", () => {
       tabLogin.classList.add("active");
       tabRegister.classList.remove("active");
-      loginForm.classList.remove("hidden");
-      registerForm.classList.add("hidden");
+      show(loginForm);
+      hide(registerForm);
       msg.textContent = "";
     });
-
     tabRegister.addEventListener("click", () => {
       tabRegister.classList.add("active");
       tabLogin.classList.remove("active");
-      registerForm.classList.remove("hidden");
-      loginForm.classList.add("hidden");
+      show(registerForm);
+      hide(loginForm);
       msg.textContent = "";
     });
 
-    $("loginButton").addEventListener("click", async () => {
-      msg.textContent = "";
+    $("loginButton").addEventListener("click", () => {
       const email = $("loginEmail").value.trim();
-      const password = $("loginPassword").value;
-
-      if (!email || !password) {
-        msg.textContent = "Bitte E-Mail und Passwort eingeben.";
+      const pw = $("loginPassword").value;
+      const user = findUserByEmail(email);
+      if (!user || user.password !== pw) {
+        msg.textContent = "E-Mail oder Passwort falsch.";
         msg.style.color = "#b91c1c";
         return;
       }
-
-      try {
-        const res = await fetch("/api/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ email, password })
-        });
-
-        const data = await res.json().catch(() => ({}));
-
-        if (!res.ok) {
-          msg.textContent = data.error || "Login fehlgeschlagen.";
-          msg.style.color = "#b91c1c";
-          return;
-        }
-
-        currentUser = data;
-        afterLogin();
-      } catch (err) {
-        console.error(err);
-        msg.textContent = "Netzwerkfehler beim Login.";
-        msg.style.color = "#b91c1c";
-      }
-    });
-
-    $("registerButton").addEventListener("click", async () => {
+      currentUser = user;
+      saveSession(user);
       msg.textContent = "";
+      afterLogin();
+    });
+
+    $("registerButton").addEventListener("click", () => {
+      const name = $("regName").value.trim();
       const email = $("regEmail").value.trim();
-      const password = $("regPassword").value;
-
-      if (!email || !password) {
-        msg.textContent = "Bitte E-Mail und Passwort eingeben.";
+      const pw = $("regPassword").value;
+      if (!name || !email || !pw) {
+        msg.textContent = "Bitte alle Felder ausfüllen.";
         msg.style.color = "#b91c1c";
         return;
       }
-      if (password.length < 6) {
-        msg.textContent = "Passwort: mindestens 6 Zeichen.";
+      if (pw.length < 6) {
+        msg.textContent = "Passwort sollte mindestens 6 Zeichen haben.";
         msg.style.color = "#b91c1c";
         return;
       }
-
-      try {
-        const res = await fetch("/api/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ email, password })
-        });
-
-        const data = await res.json().catch(() => ({}));
-
-        if (!res.ok) {
-          msg.textContent = data.error || "Registrierung fehlgeschlagen.";
-          msg.style.color = "#b91c1c";
-          return;
-        }
-
-        msg.textContent = "Registrierung erfolgreich. Bitte jetzt anmelden.";
-        msg.style.color = "#15803d";
-        tabLogin.click();
-        $("loginEmail").value = email;
-        $("loginPassword").value = "";
-      } catch (err) {
-        console.error(err);
-        msg.textContent = "Netzwerkfehler bei der Registrierung.";
+      if (findUserByEmail(email)) {
+        msg.textContent = "Für diese E-Mail existiert bereits ein Konto.";
         msg.style.color = "#b91c1c";
+        return;
       }
+      const users = getUsers();
+      const user = {
+        id: generateId(),
+        name,
+        email,
+        password: pw,
+        createdAt: new Date().toISOString(),
+        isAdmin: false
+      };
+      users.push(user);
+      saveUsers(users);
+      msg.textContent = "Registrierung erfolgreich. Du kannst dich jetzt anmelden.";
+      msg.style.color = "#15803d";
+      tabLogin.click();
+      $("loginEmail").value = email;
+      $("loginPassword").value = "";
     });
   }
 
-  // ---------- App-UI ----------
-  function switchView(viewId) {
-    const views = ["viewDashboard", "viewNewProject", "viewProject", "viewOpenProjects"];
-    views.forEach(id => {
-      const el = $(id);
-      if (!el) return;
-      el.classList.toggle("hidden", id !== viewId);
+  /* === App-UI === */
+  function setupAppUi() {
+    $("logoutButton").addEventListener("click", () => {
+      clearSession();
+      currentUser = null;
+      currentProject = null;
+      show($("loginOverlay"));
+      hide($("app"));
     });
 
-    const subtitle = $("headerSubtitle");
-    if (viewId === "viewDashboard") subtitle.textContent = "Dashboard";
-    else if (viewId === "viewNewProject") subtitle.textContent = "Neues Projekt";
-    else if (viewId === "viewProject") subtitle.textContent = "Projektdetails";
-    else if (viewId === "viewOpenProjects") subtitle.textContent = "Projekte öffnen";
-  }
+    $("btnNewProject").addEventListener("click", () => {
+      switchView("viewNewProject");
+      $("newProjectMessage").textContent = "";
+    });
+    $("btnNewProjectBack").addEventListener("click", () => {
+      switchView("viewHub");
+    });
+    $("btnCancelNewProject").addEventListener("click", () => {
+      switchView("viewHub");
+    });
 
-  function updateProjectCount() {
-    if (!currentUser) return;
-    const list = loadProjects(currentUser.email);
-    $("dashboardProjectCount").textContent =
-      list.length + (list.length === 1 ? " Projekt" : " Projekte");
-  }
+    $("btnCreateProject").addEventListener("click", () => {
+      if (!currentUser) return;
+      const title = $("npTitle").value.trim();
+      const editor = $("npEditor").value.trim();
+      const cvd = $("npCvd").value.trim();
+      const area = $("npArea").value.trim();
+      const showName = $("npShow").value.trim();
+      const format = $("npFormat").value.trim();
+      if (!title) {
+        $("newProjectMessage").textContent = "Bitte mindestens einen Titel vergeben.";
+        $("newProjectMessage").style.color = "#b91c1c";
+        return;
+      }
+      const projects = getProjectsFor(currentUser.email);
+      const project = {
+        id: generateId(),
+        title,
+        editor,
+        cvd,
+        area,
+        show: showName,
+        format,
+        shortDesc: "",
+        notes: "",
+        takes: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      projects.push(project);
+      saveProjectsFor(currentUser.email, projects);
 
-  function persistCurrentProject() {
-    if (!currentUser || !currentProject) return;
-    const list = loadProjects(currentUser.email);
-    const idx = list.findIndex(p => p.id === currentProject.id);
-    if (idx !== -1) {
+      $("newProjectMessage").textContent = "Projekt gespeichert.";
+      $("newProjectMessage").style.color = "#15803d";
+
+      ["npTitle","npEditor","npCvd","npArea","npShow","npFormat"].forEach(id => $(id).value = "");
+
+      openProject(project);
+    });
+
+    $("btnBackToHubFromProject").addEventListener("click", () => {
+      currentProject = null;
+      updateProjectBadges();
+      switchView("viewHub");
+    });
+
+    $("btnProjectSave").addEventListener("click", () => {
+      if (!currentUser || !currentProject) return;
+
+      currentProject.editor    = $("peEditor").value.trim();
+      currentProject.cvd       = $("peCvd").value.trim();
+      currentProject.area      = $("peArea").value.trim();
+      currentProject.show      = $("peShow").value.trim();
+      currentProject.format    = $("peFormat").value.trim();
+      currentProject.shortDesc = $("peShort").value.trim();
+      currentProject.notes     = $("projectNotes").value;
       currentProject.updatedAt = new Date().toISOString();
-      list[idx] = currentProject;
-      saveProjects(currentUser.email, list);
-    }
+
+      saveCurrentProject();
+      updateProjectBadges();
+      alert("Projektdaten gespeichert.");
+    });
+
+    $("btnOpenProject").addEventListener("click", () => {
+      showOpenProjects();
+      switchView("viewOpenProjects");
+    });
+
+    $("btnCloseOpenProjects").addEventListener("click", () => {
+      switchView("viewHub");
+    });
+
+    $("btnProjectWordImport").addEventListener("click", () => {
+      $("btnImportDocx").click();
+    });
+
+    $("btnAddTake").addEventListener("click", () => {
+      if (!currentProject) return;
+      if (!currentProject.takes) currentProject.takes = [];
+      currentProject.takes.push({
+        film: "",
+        take: String(currentProject.takes.length + 1),
+        in: "",
+        out: "",
+        camera: "",
+        speaker: "",
+        persons: "",
+        notes: "",
+        music: "",
+        source: ""
+      });
+      renderTakesTable();
+    });
+
+    $("btnExportCsv").addEventListener("click", () => {
+      if (!currentProject || !currentProject.takes || !currentProject.takes.length) {
+        alert("Keine Takes zum Exportieren.");
+        return;
+      }
+      const headers = ["Film","Take","In","Out","Bild/Kamera","Sprechertext","Personen","Notizen","Musik","Herkunft"];
+      const lines = [headers.join(";")];
+      currentProject.takes.forEach(t => {
+        const row = [
+          t.film || "",
+          t.take || "",
+          t.in || "",
+          t.out || "",
+          (t.camera || "").replace(/\r?\n/g," "),
+          (t.speaker || "").replace(/\r?\n/g," "),
+          (t.persons || "").replace(/\r?\n/g," "),
+          (t.notes || "").replace(/\r?\n/g," "),
+          (t.music || "").replace(/\r?\n/g," "),
+          (t.source || "").replace(/\r?\n/g," ")
+        ];
+        lines.push(row.map(v => `"${v.replace(/"/g,'""')}"`).join(";"));
+      });
+      const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = (currentProject.title || "storyboard") + "_takes.csv";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    });
+
+    $("btnImportDocx").addEventListener("click", () => {
+      if (!currentProject) {
+        $("docxInfo").textContent = "Bitte zuerst ein Projekt anlegen oder öffnen.";
+        $("docxInfo").style.color = "#b91c1c";
+        return;
+      }
+      const fileInput = $("docxFile");
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) {
+        $("docxInfo").textContent = "Bitte zuerst eine DOCX-Datei auswählen.";
+        $("docxInfo").style.color = "#b91c1c";
+        return;
+      }
+      $("docxInfo").style.color = "#6b7280";
+      $("docxInfo").textContent = "DOCX wird gelesen und analysiert …";
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const arrayBuffer = e.target.result;
+        mammoth.convertToHtml({ arrayBuffer }).then(result => {
+          const html = result.value || "";
+          const newTakes = parseDocxHtmlToTakes(html);
+          if (!newTakes.length) {
+            $("docxInfo").textContent = "Keine verwertbaren Tabellen/Absätze gefunden. Layout müssen wir noch genauer anpassen.";
+            $("docxInfo").style.color = "#b91c1c";
+            return;
+          }
+          if (!currentProject.takes) currentProject.takes = [];
+          currentProject.takes = currentProject.takes.concat(newTakes);
+          renderTakesTable();
+          saveCurrentProject();
+          $("docxInfo").textContent = `${newTakes.length} Takes aus DOCX importiert. Bitte kontrollieren und bei Bedarf anpassen.`;
+          $("docxInfo").style.color = "#15803d";
+        }).catch(err => {
+          console.error("DOCX-Import-Fehler:", err);
+          $("docxInfo").textContent = "Fehler beim Lesen der DOCX-Datei.";
+          $("docxInfo").style.color = "#b91c1c";
+        });
+      };
+      reader.readAsArrayBuffer(file);
+    });
   }
 
-  function renderOpenProjects() {
+  function showOpenProjects() {
     if (!currentUser) return;
-    const projects = loadProjects(currentUser.email);
-    const listEl = $("openProjectsList");
-    const emptyEl = $("openProjectsEmpty");
-    listEl.innerHTML = "";
-
+    const list = $("openProjectsList");
+    const emptyInfo = $("openProjectsEmpty");
+    const projects = getProjectsFor(currentUser.email);
+    list.innerHTML = "";
     if (!projects.length) {
-      emptyEl.classList.remove("hidden");
+      show(emptyInfo);
       return;
     }
-    emptyEl.classList.add("hidden");
-
+    hide(emptyInfo);
     projects.forEach(p => {
       const li = document.createElement("li");
       li.className = "projects-list-item";
@@ -975,309 +1365,33 @@
           <div>${p.title || "Ohne Titel"}</div>
           <div class="muted">${p.show || ""}</div>
         </div>
-        <span class="badge">${(p.area || "Allgemein").slice(0, 18)}</span>
+        <span class="badge">${(p.area || "Allgemein").slice(0,18)}</span>
       `;
       li.addEventListener("click", () => {
-        currentProject = p;
-        renderProjectView();
-        switchView("viewProject");
+        openProject(p);
       });
-      listEl.appendChild(li);
-    });
-  }
-
-  function resetTakeForm() {
-    editingTakeId = null;
-    $("takeNr").value = "";
-    $("takeIn").value = "";
-    $("takeOut").value = "";
-    $("takeSpeakerText").value = "";
-    $("takePersons").value = "";
-    $("takeCamera").value = "";
-    $("takeMusic").value = "";
-    $("takeSource").value = "";
-    $("takeNotes").value = "";
-    $("takeImageFile").value = "";
-    $("takeImagePreview").innerHTML = "";
-  }
-
-  function fillTakeForm(take) {
-    editingTakeId = take.id;
-    $("takeNr").value = take.nr || "";
-    $("takeIn").value = take.inTc || "";
-    $("takeOut").value = take.outTc || "";
-    $("takeSpeakerText").value = take.speakerText || "";
-    $("takePersons").value = take.persons || "";
-    $("takeCamera").value = take.camera || "";
-    $("takeMusic").value = take.music || "";
-    $("takeSource").value = take.source || "";
-    $("takeNotes").value = take.notes || "";
-    $("takeImageFile").value = "";
-    if (take.imageData) {
-      $("takeImagePreview").innerHTML =
-        `<img src="${take.imageData}" alt="Storyboard" class="thumb">`;
-    } else {
-      $("takeImagePreview").innerHTML = "";
-    }
-  }
-
-  function renderProjectView() {
-    if (!currentProject) return;
-    currentProject.takes = currentProject.takes || [];
-
-    $("projTitle").textContent = currentProject.title || "Ohne Titel";
-    const subtitleParts = [];
-    if (currentProject.show) subtitleParts.push(currentProject.show);
-    if (currentProject.format) subtitleParts.push(currentProject.format);
-    $("projSubtitle").textContent = subtitleParts.join(" · ");
-
-    const metaEl = $("projMeta");
-    metaEl.innerHTML = "";
-
-    const addMeta = (label, value) => {
-      const div = document.createElement("div");
-      div.innerHTML = `
-        <div style="font-size:0.72rem;color:#6b7280;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:0.1rem;">
-          ${label}
-        </div>
-        <div style="font-size:0.85rem;font-weight:500;">${value || "–"}</div>
-      `;
-      metaEl.appendChild(div);
-    };
-
-    addMeta("Redaktion", currentProject.editor);
-    addMeta("CVD", currentProject.cvd);
-    addMeta("Bereich", currentProject.area);
-    addMeta("Sendung", currentProject.show);
-    addMeta("Format", currentProject.format);
-    addMeta("Kurzbeschreibung", currentProject.summary);
-
-    const tbody = $("takesTableBody");
-    tbody.innerHTML = "";
-    currentProject.takes.forEach(t => {
-      const tr = document.createElement("tr");
-      tr.dataset.takeId = t.id;
-      tr.innerHTML = `
-        <td>${t.nr || ""}</td>
-        <td>${t.inTc || ""}</td>
-        <td>${t.outTc || ""}</td>
-        <td>${t.camera || ""}</td>
-        <td>${(t.speakerText || "").slice(0, 60)}${(t.speakerText || "").length > 60 ? "…" : ""}</td>
-        <td>${t.imageData ? "<span>✔︎</span>" : ""}</td>
-      `;
-      tr.addEventListener("click", () => fillTakeForm(t));
-      tbody.appendChild(tr);
-    });
-
-    $("takesInfo").textContent =
-      currentProject.takes.length
-        ? currentProject.takes.length + (currentProject.takes.length === 1 ? " Take" : " Takes")
-        : "Noch keine Takes";
-
-    resetTakeForm();
-  }
-
-  function setupAppUI() {
-    $("logoutButton").addEventListener("click", async () => {
-      try {
-        await fetch("/api/logout", { method: "POST", credentials: "include" });
-      } catch (e) {
-        console.warn("Logout-Request fehlgeschlagen", e);
-      }
-      currentUser = null;
-      currentProject = null;
-      $("app").classList.add("hidden");
-      $("loginOverlay").classList.remove("hidden");
-    });
-
-    $("btnNewProject").addEventListener("click", () => {
-      switchView("viewNewProject");
-      $("newProjectMessage").textContent = "";
-    });
-
-    $("btnBackFromNew").addEventListener("click", () => {
-      switchView("viewDashboard");
-    });
-
-    $("btnCancelNew").addEventListener("click", () => {
-      switchView("viewDashboard");
-    });
-
-    $("btnCreateProject").addEventListener("click", () => {
-      if (!currentUser) return;
-      const title = $("npTitle").value.trim();
-      if (!title) {
-        $("newProjectMessage").textContent = "Bitte mindestens einen Projekttitel eingeben.";
-        $("newProjectMessage").style.color = "#b91c1c";
-        return;
-      }
-
-      const project = {
-        id: "p_" + Math.random().toString(36).slice(2, 10),
-        title,
-        editor: $("npEditor").value.trim(),
-        cvd: $("npCvd").value.trim(),
-        area: $("npArea").value.trim(),
-        show: $("npShow").value.trim(),
-        format: $("npFormat").value.trim(),
-        summary: $("npSummary").value.trim(),
-        takes: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      const list = loadProjects(currentUser.email);
-      list.push(project);
-      saveProjects(currentUser.email, list);
-
-      $("newProjectMessage").textContent = "Projekt gespeichert.";
-      $("newProjectMessage").style.color = "#15803d";
-      ["npTitle","npEditor","npCvd","npArea","npShow","npFormat","npSummary"]
-        .forEach(id => $(id).value = "");
-
-      updateProjectCount();
-      currentProject = project;
-      renderProjectView();
-      switchView("viewProject");
-    });
-
-    $("btnBackFromProject").addEventListener("click", () => {
-      currentProject = null;
-      switchView("viewDashboard");
-    });
-
-    $("btnOpenProjects").addEventListener("click", () => {
-      renderOpenProjects();
-      switchView("viewOpenProjects");
-    });
-
-    $("btnCloseOpenProjects").addEventListener("click", () => {
-      switchView("viewDashboard");
-    });
-
-    // Takes-Buttons
-    $("btnNewTake").addEventListener("click", () => {
-      resetTakeForm();
-    });
-
-    $("btnTakeFromLast").addEventListener("click", () => {
-      if (!currentProject || !currentProject.takes || !currentProject.takes.length) return;
-      const last = currentProject.takes[currentProject.takes.length - 1];
-      if (last.outTc) $("takeIn").value = last.outTc;
-    });
-
-    $("btnEstimateDuration").addEventListener("click", () => {
-      const inTc = $("takeIn").value.trim();
-      const framesIn = parseTimecode(inTc);
-      if (framesIn == null) {
-        alert("Bitte zuerst einen gültigen In-Timecode eingeben (hh:mm:ss:ff).");
-        return;
-      }
-      const text = $("takeSpeakerText").value;
-      const seconds = estimateDurationFromText(text);
-      const framesOut = framesIn + seconds * FPS;
-      $("takeOut").value = formatTimecode(framesOut);
-    });
-
-    $("takeImageFile").addEventListener("change", () => {
-      const file = $("takeImageFile").files && $("takeImageFile").files[0];
-      if (!file) {
-        $("takeImagePreview").innerHTML = "";
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = () => {
-        $("takeImagePreview").innerHTML =
-          `<img src="${reader.result}" alt="Storyboard-Preview" class="thumb">`;
-      };
-      reader.readAsDataURL(file);
-    });
-
-    $("btnSaveTake").addEventListener("click", async () => {
-      if (!currentProject) return;
-      const nr = $("takeNr").value.trim();
-      const inTc = $("takeIn").value.trim();
-      const outTc = $("takeOut").value.trim();
-      const speakerText = $("takeSpeakerText").value.trim();
-
-      if (!nr && !speakerText) {
-        alert("Mindestens Take-Nummer oder Sprechertext angeben.");
-        return;
-      }
-
-      let imageData = null;
-      const fileInput = $("takeImageFile");
-      const file = fileInput.files && fileInput.files[0];
-
-      if (file) {
-        try {
-          imageData = await resizeImageTo1920x1080(file);
-        } catch (e) {
-          console.error("Bildverarbeitung fehlgeschlagen", e);
-          alert("Bild konnte nicht verarbeitet werden.");
-        }
-      }
-
-      const takes = currentProject.takes || [];
-      let take;
-
-      if (editingTakeId) {
-        take = takes.find(t => t.id === editingTakeId);
-        if (!take) {
-          editingTakeId = null;
-        }
-      }
-
-      if (!take) {
-        take = { id: "t_" + Math.random().toString(36).slice(2, 10) };
-        takes.push(take);
-      }
-
-      take.nr = nr;
-      take.inTc = inTc;
-      take.outTc = outTc;
-      take.speakerText = speakerText;
-      take.persons = $("takePersons").value.trim();
-      take.camera = $("takeCamera").value.trim();
-      take.music = $("takeMusic").value.trim();
-      take.source = $("takeSource").value.trim();
-      take.notes = $("takeNotes").value.trim();
-      if (imageData) {
-        take.imageData = imageData;
-      }
-
-      currentProject.takes = takes;
-      persistCurrentProject();
-      renderProjectView();
+      list.appendChild(li);
     });
   }
 
   function afterLogin() {
-    $("loginOverlay").classList.add("hidden");
-    $("app").classList.remove("hidden");
-    $("headerUserName").textContent =
-      currentUser.email + (currentUser.isAdmin ? " (Admin)" : "");
-    updateProjectCount();
-    switchView("viewDashboard");
+    hide($("loginOverlay"));
+    show($("app"));
+    updateHeader();
+    updateProjectBadges();
+    switchView("viewHub");
   }
 
-  async function tryRestoreSession() {
-    try {
-      const res = await fetch("/api/me", {
-        method: "GET",
-        credentials: "include"
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      currentUser = data;
-      afterLogin();
-    } catch (e) {
-      console.warn("Keine Session gefunden oder Fehler bei /api/me", e);
-    }
-  }
+  /* === Initialisierung === */
+  createDefaultAdminIfNeeded();
+  setupLoginUi();
+  setupAppUi();
 
-  // Initialisierung
-  setupLoginUI();
-  setupAppUI();
-  tryRestoreSession();
+  const session = getSession();
+  if (session && findUserByEmail(session.email)) {
+    currentUser = findUserByEmail(session.email);
+    afterLogin();
+  }
 </script>
+</body>
+</html>
