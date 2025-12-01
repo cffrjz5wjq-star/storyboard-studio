@@ -1,345 +1,10 @@
 // app.js
-// Logik für die Projektseite (project.html).
-// Index/Login bleiben unberührt – wir prüfen zuerst, ob wir auf der Projektseite sind.
+// Storyboard Studio – Login, Projektverwaltung, Navigation zur Projektseite
 
-window.addEventListener("DOMContentLoaded", () => {
-  const projectRoot = document.getElementById("projectRoot");
-  if (!projectRoot) {
-    // Auf anderen Seiten (z.B. index.html) nichts tun
-    return;
-  }
+// ----------------------------------------------------------
+// Hilfsfunktionen
+// ----------------------------------------------------------
 
-  /*************** Hilfsfunktionen ***************/
-  const $ = (id) => document.getElementById(id);
-
-  function loadActiveProject() {
-    // Projekt kommt aus localStorage["sb_active_project"]
-    // Fallback: Demo-Projekt, falls nichts gesetzt ist.
-    const raw = localStorage.getItem("sb_active_project");
-    if (!raw) {
-      return {
-        id: "demo",
-        title: "Demo-Projekt",
-        editor: "Redaktion",
-        cvd: "CVD",
-        area: "Bereich",
-        show: "Sendung",
-        format: "Format",
-        length: "20",
-        notes: "",
-        takes: [
-          {
-            id: "t1",
-            takeNumber: 1,
-            in: "00:00:00",
-            out: "00:00:06",
-            persons: "",
-            picture: "Einstieg / Totale",
-            voice: "Test-Text für Sprecher.",
-            notes: "",
-            music: "",
-            source: "",
-            images: []
-          }
-        ]
-      };
-    }
-    try {
-      return JSON.parse(raw);
-    } catch (e) {
-      console.error("sb_active_project ist kaputt, nutze Fallback:", e);
-      return null;
-    }
-  }
-
-  function saveActiveProject() {
-    if (!currentProject) return;
-    localStorage.setItem("sb_active_project", JSON.stringify(currentProject));
-  }
-
-  function secondsToTimecode(seconds) {
-    seconds = Math.max(0, Math.round(seconds));
-    const h = String(Math.floor(seconds / 3600)).padStart(2, "0");
-    const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, "0");
-    const s = String(seconds % 60).padStart(2, "0");
-    return `${h}:${m}:${s}`;
-  }
-
-  function estimateDurationFromText(text, wordsPerSecond = 3) {
-    const words = (text || "").trim().split(/\s+/).filter(Boolean);
-    return words.length / wordsPerSecond;
-  }
-
-  /*************** State ***************/
-  let currentProject = loadActiveProject();
-  if (!currentProject) {
-    currentProject = {
-      id: "empty",
-      title: "",
-      editor: "",
-      cvd: "",
-      area: "",
-      show: "",
-      format: "",
-      length: "",
-      notes: "",
-      takes: []
-    };
-  }
-  if (!Array.isArray(currentProject.takes)) currentProject.takes = [];
-
-  /*************** Projekt-Metadaten ***************/
-  function renderProjectMeta() {
-    $("metaTitle").value = currentProject.title || "";
-    $("metaEditor").value = currentProject.editor || "";
-    $("metaCvd").value = currentProject.cvd || "";
-    $("metaArea").value = currentProject.area || "";
-    $("metaShow").value = currentProject.show || "";
-    $("metaFormat").value = currentProject.format || "";
-    $("metaLength").value = currentProject.length || "";
-    $("projectNotes").value = currentProject.notes || "";
-  }
-
-  function readProjectMetaFromInputs() {
-    currentProject.title = $("metaTitle").value.trim();
-    currentProject.editor = $("metaEditor").value.trim();
-    currentProject.cvd = $("metaCvd").value.trim();
-    currentProject.area = $("metaArea").value.trim();
-    currentProject.show = $("metaShow").value.trim();
-    currentProject.format = $("metaFormat").value.trim();
-    currentProject.length = $("metaLength").value.trim();
-    currentProject.notes = $("projectNotes").value;
-    currentProject.updatedAt = new Date().toISOString();
-  }
-
-  $("btnSaveProject").addEventListener("click", () => {
-    readProjectMetaFromInputs();
-    saveActiveProject();
-    alert("Projekt gespeichert.");
-  });
-
-  $("btnDeleteProject").addEventListener("click", () => {
-    const name = currentProject.title || "dieses Projekt";
-    if (!confirm(`Willst du ${name} wirklich löschen?`)) return;
-
-    const msg =
-      "Hast du alle wichtigen Daten exportiert (PDF/CSV)?\n" +
-      "Du kannst vorher z.B. die Seite drucken oder die Tabelle exportieren.";
-    if (!confirm(msg + "\n\nTrotzdem endgültig löschen?")) return;
-
-    localStorage.removeItem("sb_active_project");
-    currentProject = null;
-    window.location.href = "index.html";
-  });
-
-  /*************** Tabelle & Spalten-Toggle ***************/
-  function toggleColumnVisibility(colName, visible) {
-    const cells = document.querySelectorAll(`[data-col="${colName}"]`);
-    cells.forEach((cell) => {
-      if (visible) {
-        cell.classList.remove("hidden-col");
-      } else {
-        cell.classList.add("hidden-col");
-      }
-    });
-  }
-
-  document.querySelectorAll("input[data-col-toggle]").forEach((cb) => {
-    cb.addEventListener("change", () => {
-      const col = cb.getAttribute("data-col-toggle");
-      toggleColumnVisibility(col, cb.checked);
-    });
-  });
-
-  /*************** Takes + Bilder ***************/
-  const hiddenImageInput = document.createElement("input");
-  hiddenImageInput.type = "file";
-  hiddenImageInput.accept = "image/*";
-  let pendingImageTakeId = null;
-
-  hiddenImageInput.addEventListener("change", () => {
-    const file = hiddenImageInput.files[0];
-    if (!file || !pendingImageTakeId) return;
-
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result;
-      const take = currentProject.takes.find((t) => t.id === pendingImageTakeId);
-      if (!take) return;
-      if (!Array.isArray(take.images)) take.images = [];
-      if (take.images.length >= 4) {
-        alert("Maximal 4 Bilder pro Take.");
-        return;
-      }
-      take.images.push(dataUrl);
-      saveActiveProject();
-      renderTakesTable();
-    };
-    reader.readAsDataURL(file);
-  });
-
-  document.addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-add-image]");
-    if (btn) {
-      pendingImageTakeId = btn.getAttribute("data-add-image");
-      hiddenImageInput.value = "";
-      hiddenImageInput.click();
-    }
-  });
-
-  function openImagePreview(dataUrl) {
-    const w = window.open("", "_blank", "width=1280,height=720");
-    w.document.write(
-      `<html><head><title>Bildvorschau</title></head>
-       <body style="margin:0;display:flex;align-items:center;justify-content:center;background:#111;">
-         <img src="${dataUrl}" style="max-width:100%;max-height:100%;object-fit:contain;">
-       </body></html>`
-    );
-  }
-
-  function renderTakesTable() {
-    const tbody = $("takesBody");
-    tbody.innerHTML = "";
-
-    currentProject.takes.forEach((take, index) => {
-      if (!take.id) take.id = `take_${index}`;
-      const tr = document.createElement("tr");
-
-      function textCell(col, value, onInput) {
-        const td = document.createElement("td");
-        td.setAttribute("data-col", col);
-        const input = document.createElement("input");
-        input.type = "text";
-        input.value = value || "";
-        input.addEventListener("input", () => onInput(input.value));
-        td.appendChild(input);
-        tr.appendChild(td);
-      }
-
-      textCell("take", take.takeNumber || index + 1, (v) => {
-        take.takeNumber = v;
-        saveActiveProject();
-      });
-      textCell("in", take.in || "", (v) => {
-        take.in = v;
-        saveActiveProject();
-      });
-      textCell("out", take.out || "", (v) => {
-        take.out = v;
-        saveActiveProject();
-      });
-      textCell("persons", take.persons || "", (v) => {
-        take.persons = v;
-        saveActiveProject();
-      });
-
-      // Bild/Kamera
-      {
-        const td = document.createElement("td");
-        td.setAttribute("data-col", "picture");
-        const ta = document.createElement("textarea");
-        ta.value = take.picture || "";
-        ta.addEventListener("input", () => {
-          take.picture = ta.value;
-          saveActiveProject();
-        });
-        td.appendChild(ta);
-        tr.appendChild(td);
-      }
-
-      // Sprechertext
-      {
-        const td = document.createElement("td");
-        td.setAttribute("data-col", "voice");
-        const ta = document.createElement("textarea");
-        ta.value = take.voice || "";
-        ta.addEventListener("input", () => {
-          take.voice = ta.value;
-          saveActiveProject();
-        });
-        td.appendChild(ta);
-        tr.appendChild(td);
-      }
-
-      // Notizen
-      {
-        const td = document.createElement("td");
-        td.setAttribute("data-col", "notes");
-        const ta = document.createElement("textarea");
-        ta.value = take.notes || "";
-        ta.addEventListener("input", () => {
-          take.notes = ta.value;
-          saveActiveProject();
-        });
-        td.appendChild(ta);
-        tr.appendChild(td);
-      }
-
-      // Musik
-      textCell("music", take.music || "", (v) => {
-        take.music = v;
-        saveActiveProject();
-      });
-
-      // Herkunft
-      textCell("source", take.source || "", (v) => {
-        take.source = v;
-        saveActiveProject();
-      });
-
-      // Bilder
-      {
-        const td = document.createElement("td");
-        td.setAttribute("data-col", "images");
-        td.innerHTML = `
-          <div class="images-cell">
-            <div class="images-thumbs" id="thumbs-${take.id}"></div>
-            <button type="button" class="small" data-add-image="${take.id}">
-              Bild hinzufügen
-            </button>
-          </div>
-        `;
-        tr.appendChild(td);
-      }
-
-      tbody.appendChild(tr);
-
-      // Thumbnails einfüllen
-      const thumbsDiv = document.getElementById(`thumbs-${take.id}`);
-      if (thumbsDiv) {
-        thumbsDiv.innerHTML = "";
-        (take.images || []).forEach((imgData, i) => {
-          const img = document.createElement("img");
-          img.src = imgData;
-          img.title = `Bild ${i + 1}`;
-          img.addEventListener("click", () => openImagePreview(imgData));
-          thumbsDiv.appendChild(img);
-        });
-      }
-    });
-  }
-
-  /*************** Timecodes neu berechnen ***************/
-  $("btnRecalcTimecodes").addEventListener("click", () => {
-    let currentSeconds = 0;
-    currentProject.takes.forEach((take) => {
-      const dur = estimateDurationFromText(take.voice || take.speakerText, 3);
-      take.in = secondsToTimecode(currentSeconds);
-      currentSeconds += dur;
-      take.out = secondsToTimecode(currentSeconds);
-    });
-    saveActiveProject();
-    renderTakesTable();
-    alert("Timecodes anhand des Sprechertextes neu berechnet (3 Wörter/Sek.).");
-  });
-
-  /*************** Initialisierung ***************/
-  renderProjectMeta();
-  renderTakesTable();
-});
-// app.js
-
-// Kleine Hilfsfunktionen
 function safeKey(str) {
   return String(str || "").toLowerCase().replace(/[^a-z0-9]+/g, "_");
 }
@@ -358,41 +23,275 @@ function saveJSON(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
-// Angemeldeter User (wie bei dir auf dem Dashboard angezeigt)
-function getCurrentUserEmail() {
-  const session = loadJSON("sb_session", null);
-  if (session && session.email) return session.email;
-  // Fallback, wenn du noch kein Login fertig hast
-  return "local_guest";
+// ----------------------------------------------------------
+// Session & Benutzerverwaltung
+// ----------------------------------------------------------
+
+function getCurrentUser() {
+  return loadJSON("sb_session", null);
 }
 
-// Zentrales Projekt-Open
-function openProjectById(projectId) {
-  const email = getCurrentUserEmail();
-  const projectsKey = "sb_projects_" + safeKey(email);
-  const projects = loadJSON(projectsKey, []);
+function getCurrentUserEmail() {
+  const session = getCurrentUser();
+  return session ? session.email : null;
+}
 
+function login(email, password) {
+  email = email.trim().toLowerCase();
+
+  // Admin immer erlauben
+  if (email === "admin@stefanweichelt.de") {
+    if (!password) return { error: "Passwort erforderlich" };
+    saveJSON("sb_session", { email, role: "admin" });
+    return { ok: true };
+  }
+
+  // Normale Nutzer
+  const users = loadJSON("sb_users", []);
+  let user = users.find(u => u.email === email);
+
+  if (!user) {
+    return { error: "Benutzer nicht gefunden" };
+  }
+  if (user.password !== password) {
+    return { error: "Falsches Passwort" };
+  }
+
+  saveJSON("sb_session", { email, role: "user" });
+  return { ok: true };
+}
+
+function registerUser(email, password) {
+  email = email.trim().toLowerCase();
+
+  const users = loadJSON("sb_users", []);
+  if (users.find(u => u.email === email)) {
+    return { error: "Benutzer existiert bereits" };
+  }
+
+  users.push({ email, password });
+  saveJSON("sb_users", users);
+
+  saveJSON("sb_session", { email, role: "user" });
+  return { ok: true };
+}
+
+function logout() {
+  localStorage.removeItem("sb_session");
+  window.location.reload();
+}
+
+// ----------------------------------------------------------
+// Projekte speichern / laden
+// ----------------------------------------------------------
+
+function getProjectsKey() {
+  const email = getCurrentUserEmail();
+  if (!email) return null;
+  return "sb_projects_" + safeKey(email);
+}
+
+function loadProjects() {
+  const key = getProjectsKey();
+  if (!key) return [];
+  return loadJSON(key, []);
+}
+
+function saveProjects(projects) {
+  const key = getProjectsKey();
+  if (!key) return;
+  saveJSON(key, projects);
+}
+
+function createProjectId(title) {
+  return safeKey(title) + "_" + Date.now().toString(36);
+}
+
+function addProject(p) {
+  const projects = loadProjects();
+  projects.push(p);
+  saveProjects(projects);
+}
+
+function updateProject(p) {
+  const projects = loadProjects();
+  const index = projects.findIndex(x => x.id === p.id);
+  if (index >= 0) {
+    projects[index] = p;
+    saveProjects(projects);
+  }
+}
+
+// ----------------------------------------------------------
+// Navigation in den Editor
+// ----------------------------------------------------------
+
+function openProjectById(projectId) {
+  const projects = loadProjects();
   const project = projects.find(p => p.id === projectId);
   if (!project) {
-    alert("Projekt mit dieser ID wurde nicht gefunden.");
+    alert("Projekt nicht gefunden.");
     return;
   }
 
-  // aktives Projekt im LocalStorage merken
   saveJSON("sb_active_project", project);
-
-  // zur Editor-Seite springen
   window.location.href = "project.html";
 }
-document.addEventListener("DOMContentLoaded", function () {
-  // Projekt-Buttons anklemmen
-  document.querySelectorAll(".project-card").forEach(card => {
-    const projectId = card.getAttribute("data-project-id");
-    const openBtn = card.querySelector(".project-open-btn");
-    if (!openBtn || !projectId) return;
 
-    openBtn.addEventListener("click", () => {
-      openProjectById(projectId);
+// ----------------------------------------------------------
+// UI-Elemente füllen
+// ----------------------------------------------------------
+
+function updateProjectList() {
+  const container = document.getElementById("projectList");
+  if (!container) return;
+
+  const projects = loadProjects();
+  container.innerHTML = "";
+
+  if (!projects.length) {
+    container.innerHTML = `<div class="hint">Noch keine Projekte vorhanden.</div>`;
+    return;
+  }
+
+  projects.forEach(p => {
+    const el = document.createElement("div");
+    el.className = "project-item";
+
+    el.innerHTML = `
+      <div class="project-item-main">
+        <div class="project-item-title">${p.title}</div>
+        <div class="project-item-meta">${p.show || ""} · ${p.format || ""}</div>
+      </div>
+      <div class="project-item-actions">
+        <button class="small" data-open="${p.id}">Öffnen</button>
+      </div>
+    `;
+
+    container.appendChild(el);
+  });
+
+  container.querySelectorAll("[data-open]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-open");
+      openProjectById(id);
     });
   });
+}
+
+// ----------------------------------------------------------
+// Login-Ansicht ein-/ausblenden
+// ----------------------------------------------------------
+
+function showAuthView() {
+  document.getElementById("authView").classList.remove("hidden");
+  document.getElementById("dashboardView").classList.add("hidden");
+  document.getElementById("userInfo").textContent = "Nicht eingeloggt";
+  document.getElementById("btnLogout").classList.add("hidden");
+}
+
+function showDashboard() {
+  document.getElementById("authView").classList.add("hidden");
+  document.getElementById("dashboardView").classList.remove("hidden");
+
+  const session = getCurrentUser();
+  document.getElementById("userInfo").textContent = session.email;
+  document.getElementById("btnLogout").classList.remove("hidden");
+
+  updateProjectList();
+}
+
+// ----------------------------------------------------------
+// Neues Projekt anlegen
+// ----------------------------------------------------------
+
+function createProjectFromForm() {
+  const title = document.getElementById("npTitle").value.trim();
+  if (!title) {
+    alert("Titel fehlt");
+    return;
+  }
+
+  const p = {
+    id: createProjectId(title),
+    title,
+    editor: document.getElementById("npEditor").value.trim(),
+    cvd: document.getElementById("npCvd").value.trim(),
+    area: document.getElementById("npArea").value.trim(),
+    show: document.getElementById("npShow").value.trim(),
+    format: document.getElementById("npFormat").value.trim(),
+    target: document.getElementById("npTarget").value.trim(),
+    team: document.getElementById("npTeam").value.trim(),
+    shortDesc: document.getElementById("npShort").value.trim(),
+    createdAt: new Date().toISOString(),
+    takes: []
+  };
+
+  addProject(p);
+  updateProjectList();
+
+  // Formular leeren
+  document.getElementById("npTitle").value = "";
+  document.getElementById("npEditor").value = "";
+  document.getElementById("npCvd").value = "";
+  document.getElementById("npArea").value = "";
+  document.getElementById("npShow").value = "";
+  document.getElementById("npFormat").value = "";
+  document.getElementById("npTarget").value = "";
+  document.getElementById("npTeam").value = "";
+  document.getElementById("npShort").value = "";
+
+  alert("Projekt gespeichert.");
+}
+
+// ----------------------------------------------------------
+// Event-Setup
+// ----------------------------------------------------------
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  // Login
+  document.getElementById("btnLogin").addEventListener("click", () => {
+    const email = document.getElementById("loginEmail").value;
+    const pw = document.getElementById("loginPassword").value;
+    const r = login(email, pw);
+
+    if (r.error) alert(r.error);
+    else showDashboard();
+  });
+
+  // Registrierung
+  document.getElementById("btnRegister").addEventListener("click", () => {
+    const email = document.getElementById("loginEmail").value;
+    const pw = document.getElementById("loginPassword").value;
+    const r = registerUser(email, pw);
+
+    if (r.error) alert(r.error);
+    else showDashboard();
+  });
+
+  // Logout
+  document.getElementById("btnLogout").addEventListener("click", logout);
+
+  // Neues Projekt beginnen
+  document.getElementById("btnNewProjectTop").addEventListener("click", () => {
+    document.getElementById("newProjectForm").scrollIntoView({ behavior: "smooth" });
+  });
+
+  document.getElementById("btnNewProjectTile").addEventListener("click", () => {
+    document.getElementById("newProjectForm").scrollIntoView({ behavior: "smooth" });
+  });
+
+  document.getElementById("btnCreateProject").addEventListener("click", createProjectFromForm);
+  document.getElementById("btnResetProjectForm").addEventListener("click", () => {
+    document.getElementById("newProjectForm").querySelectorAll("input, textarea").forEach(el => el.value = "");
+  });
+
+  // Session prüfen
+  const session = getCurrentUser();
+  if (session) {
+    showDashboard();
+  } else {
+    showAuthView();
+  }
 });
