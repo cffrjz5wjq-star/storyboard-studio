@@ -54,9 +54,10 @@ body {
 
 .app {
   width: 100%;
-  max-width: 1440px;   /* <- geändert */
+  max-width: 1500px;   /* vorher 1120px */
   background: var(--bg-card);
   border-radius: 32px;
+  box-shadow: var(--shadow-soft);
   border: 1px solid rgba(249, 115, 22, 0.18);
   display: flex;
   flex-direction: column;
@@ -417,10 +418,18 @@ button:disabled {
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
+  table-layout: fixed;        /* NEU: Spaltenbreiten stabil halten */
 }
 
 .takes-table thead {
   background: #f9fafb;
+}
+
+.takes-table thead th {
+  position: sticky;
+  top: 0;
+  background: #f9fafb;
+  z-index: 2;
 }
 
 .takes-table th,
@@ -436,7 +445,25 @@ button:disabled {
   color: #374151;
   white-space: nowrap;
 }
+/* Spaltenbreiten */
+.takes-table th[data-col="take"],
+.takes-table td[data-col="take"] {
+  width: 60px;
+}
 
+.takes-table th[data-col="tcIn"],
+.takes-table td[data-col="tcIn"],
+.takes-table th[data-col="tcOut"],
+.takes-table td[data-col="tcOut"] {
+  width: 90px;
+}
+
+.takes-table th[data-col="camera"],
+.takes-table td[data-col="camera"],
+.takes-table th[data-col="speaker"],
+.takes-table td[data-col="speaker"] {
+  min-width: 260px;
+}
 .takes-table td textarea,
 .takes-table td input[type="text"] {
   width: 100%;
@@ -449,7 +476,7 @@ button:disabled {
 }
 
 .takes-table td textarea {
-  min-height: 40px;
+  min-height: 56px;
 }
 
 .takes-table tr:nth-child(even) {
@@ -598,4 +625,8 @@ tr.drag-over {
   border-radius: 4px;
   cursor: pointer;
   margin-right: 4px;
+}
+.table-wrapper {
+  max-height: calc(100vh - 320px);   /* kannst du später anpassen */
+  overflow: auto;
 }
