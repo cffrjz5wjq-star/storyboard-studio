@@ -1,27 +1,540 @@
-const express = require("express");
-const path = require("path");
+/* ------------------------------
+   Grundlayout & Farben
+---------------------------------*/
 
-const app = express();
-const PORT = process.env.PORT || 10000;
+:root {
+  --bg-main: #f5f5f7;
+  --bg-card: #ffffff;
+  --bg-soft: #fafafa;
+  --border-subtle: #e5e7eb;
+  --border-strong: #f97316;
+  --text-main: #111827;
+  --text-muted: #6b7280;
+  --accent: #f97316;
+  --accent-soft: rgba(249, 115, 22, 0.06);
+  --danger: #dc2626;
+  --shadow-soft: 0 10px 30px rgba(15, 23, 42, 0.06);
+  --radius-card: 18px;
+  --radius-pill: 999px;
+  --font-main: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+    system-ui, -system-ui, sans-serif;
+}
 
-// Static-Files aus /public
-app.use(express.static(path.join(__dirname, "public")));
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
-// Startseite
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
 
-// Projektseite – WICHTIG: explizit vor einer evtl. Catch-All-Route
-app.get("/project.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "project.html"));
-});
+body {
+  font-family: var(--font-main);
+  font-size: 14px;
+  color: var(--text-main);
+  background: radial-gradient(circle at top, #fef9c3 0, #f5f5f7 38%, #f9fafb 100%);
+}
 
-// Falls du eine Catch-All-Route hast, dann NUR ganz zum Schluss:
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
+/* ------------------------------
+   App-Rahmen
+---------------------------------*/
 
-app.listen(PORT, () => {
-  console.log(`Server läuft auf Port ${PORT}`);
-});
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  padding: 12px;
+}
+
+.app {
+  width: 100%;
+  max-width: 1120px;
+  background: var(--bg-card);
+  border-radius: 32px;
+  box-shadow: var(--shadow-soft);
+  border: 1px solid rgba(249, 115, 22, 0.18);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ------------------------------
+   Header
+---------------------------------*/
+
+.project-header {
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: linear-gradient(
+    120deg,
+    rgba(249, 115, 22, 0.04),
+    rgba(249, 115, 22, 0)
+  );
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logo-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 14px;
+  background: radial-gradient(circle at 20% 0, #fed7aa, #f97316);
+  color: white;
+  font-weight: 700;
+  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 12px rgba(249, 115, 22, 0.35);
+}
+
+.header-title {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.header-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.header-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.user-label {
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  border: 1px solid rgba(249, 115, 22, 0.4);
+  color: var(--accent);
+}
+
+/* ------------------------------
+   Hauptbereiche
+---------------------------------*/
+
+.project-main {
+  padding: 10px 14px 16px;
+  background: var(--bg-main);
+  flex: 1;
+  overflow-y: auto;
+}
+
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border-subtle);
+  padding: 10px 12px 12px;
+  margin-bottom: 10px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.card-title {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.card-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ------------------------------
+   Formularfelder
+---------------------------------*/
+
+.field {
+  margin-top: 4px;
+}
+
+.field label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  border-radius: 9px;
+  border: 1px solid var(--border-subtle);
+  padding: 4px 7px;
+  font-size: 13px;
+  font-family: var(--font-main);
+  outline: none;
+  background: #ffffff;
+}
+
+.field input:focus,
+.field textarea:focus {
+  border-color: rgba(249, 115, 22, 0.7);
+  box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.08);
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+/* Spezielle Grids */
+
+.project-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 6px 10px;
+  margin-top: 4px;
+}
+
+.project-meta-label {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+/* ------------------------------
+   Buttons
+---------------------------------*/
+
+button {
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-main);
+  font-size: 13px;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.small {
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.primary {
+  background: linear-gradient(135deg, #f97316, #fb923c);
+  color: #ffffff;
+  box-shadow: 0 4px 10px rgba(249, 115, 22, 0.35);
+}
+
+.primary:hover {
+  filter: brightness(1.05);
+}
+
+.secondary {
+  background: #ffffff;
+  color: var(--text-main);
+  border: 1px solid var(--border-subtle);
+}
+
+.secondary:hover {
+  background: #f3f4f6;
+}
+
+.danger {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.danger:hover {
+  background: #fecaca;
+}
+
+/* ------------------------------
+   Dashboard-Layout (Startseite)
+---------------------------------*/
+
+.dashboard-main {
+  padding: 10px 14px 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.9fr) minmax(260px, 0.9fr);
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .dashboard-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.dashboard-tile {
+  padding: 8px 9px;
+  border-radius: 16px;
+  border: 1px solid var(--border-subtle);
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dashboard-tile-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.dashboard-tile-text {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Projektliste rechts */
+
+.project-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 4px;
+}
+
+.project-item {
+  border-radius: 12px;
+  border: 1px solid var(--border-subtle);
+  padding: 5px 7px;
+  background: #ffffff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+
+.project-item-main {
+  min-width: 0;
+}
+
+.project-item-title {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-item-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.project-item-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Auth-Karte */
+
+.auth-card {
+  max-width: 400px;
+  margin: 40px auto;
+}
+
+/* ------------------------------
+   Takes-Tabelle (Projektseite)
+---------------------------------*/
+
+.toolbar {
+  margin-top: 4px;
+  padding: 4px 7px;
+  border-radius: 12px;
+  background: #f9fafb;
+  border: 1px dashed rgba(148, 163, 184, 0.7);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.column-toggle-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.column-toggle-bar label {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.toolbar-right {
+  display: flex;
+  gap: 4px;
+}
+
+.table-wrapper {
+  margin-top: 6px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border-subtle);
+  background: #ffffff;
+}
+
+.takes-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.takes-table thead {
+  background: #f9fafb;
+}
+
+.takes-table th,
+.takes-table td {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 4px 5px;
+  vertical-align: top;
+}
+
+.takes-table th {
+  font-weight: 600;
+  font-size: 11px;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.takes-table td textarea,
+.takes-table td input[type="text"] {
+  width: 100%;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  padding: 3px 4px;
+  resize: vertical;
+  font-family: var(--font-main);
+}
+
+.takes-table td textarea {
+  min-height: 40px;
+}
+
+.takes-table tr:nth-child(even) {
+  background: #fbfbfd;
+}
+
+.takes-table tr.row-selected {
+  background: #fef3c7 !important;
+}
+
+tr.dragging {
+  opacity: 0.5;
+}
+
+tr.drag-over {
+  outline: 2px dashed #f97316;
+}
+
+/* Spalten ausblenden */
+
+.hidden-col {
+  display: none !important;
+}
+
+/* Bildzellen */
+
+.images-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.images-thumbs img {
+  width: 60px;
+  height: auto;
+  border-radius: 4px;
+  margin-right: 3px;
+  cursor: pointer;
+}
+
+.hidden-file {
+  display: none;
+}
+
+/* Projekt-Notizen */
+
+#projectNotes {
+  min-height: 70px;
+}
+
+/* ------------------------------
+   Lightbox für Bilder
+---------------------------------*/
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.lightbox.hidden {
+  display: none;
+}
+
+.lightbox-inner img {
+  max-width: 90vw;
+  max-height: 90vh;
+  border-radius: 10px;
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55);
+}
+
+/* ------------------------------
+   Utilities
+---------------------------------*/
+
+.muted {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.hidden {
+  display: none !important;
+}
