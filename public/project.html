@@ -479,36 +479,37 @@ function renderTakesTable() {
     tbody.appendChild(tr);
   });
 
-  // Feld-Events
-  tbody.querySelectorAll("input[data-field], textarea[data-field]").forEach(el => {
-    el.addEventListener("input", () => {
-      const index = parseInt(el.dataset.index, 10);
-      const field = el.dataset.field;
-      const t = currentProject.takes[index];
-      if (!t) return;
+ // Feld-Events
+tbody.querySelectorAll('input[data-field], textarea[data-field]').forEach(el => {
+  el.addEventListener("input", () => {
+    const index = parseInt(el.dataset.index, 10);
+    const field = el.dataset.field;
+    const t = currentProject.takes[index];
+    if (!t) return;
 
-      t[field] = el.value;
-      const autoTc = $("chkAutoTc").checked;
+    t[field] = el.value;
+    const autoTc = $("chkAutoTc").checked;
 
-      // Bei Sprechertext oder manuell gesetzten In-Timecodes
-      // Timecodes neu berechnen, aber Tabelle nicht komplett neu aufbauen
-      if (autoTc && (field === "speaker" || field === "tcIn")) {
-        recalcTimecodes();
+    // ---- Timecodes bei Sprechertext oder manueller In-Änderung neu berechnen ----
+    if (autoTc && (field === "speaker" || field === "tcIn")) {
+      recalcTimecodes();
 
-        // Nur die In/Out-Felder in der existierenden Tabelle aktualisieren
-        currentProject.takes.forEach((take, i) => {
-          const row = tbody.querySelector(`tr[data-index="${i}"]`);
-          if (!row) return;
-          const inInput  = row.querySelector('input[data-field="tcIn"]');
-          const outInput = row.querySelector('input[data-field="tcOut"]');
-          if (inInput)  inInput.value  = take.tcIn || "";
-          if (outInput) outInput.value = take.tcOut || "";
-        });
-      }
+      // Update NUR In/Out-Felder direkt im DOM, NICHT neu rendern
+      currentProject.takes.forEach((take, i) => {
+        const row = tbody.querySelector(`tr[data-index="${i}"]`);
+        if (!row) return;
 
-      persistCurrentProject();
-    });
+        const inInput  = row.querySelector('input[data-field="tcIn"]');
+        const outInput = row.querySelector('input[data-field="tcOut"]');
+        if (inInput)  inInput.value  = take.tcIn  || "";
+        if (outInput) outInput.value = take.tcOut || "";
+      });
+    }
+
+    // Scrollposition NICHT verändern → Sprechertext springt NICHT mehr
+    persistCurrentProject();
   });
+});
 
   // Bild-Uploads
   tbody.querySelectorAll("input[data-image-index]").forEach(input => {
@@ -583,18 +584,50 @@ function reorderTake(from, to) {
   persistCurrentProject();
 }
 
+// Timecodes neu aufbauen – fortlaufend, Basis ist ggf. TC-In vom ersten Take
 function recalcTimecodes() {
   const takes = currentProject.takes || [];
+  if (!takes.length) return;
+
   let cursor = 0;
+
+  // Wenn beim ersten Take ein TC-In gesetzt ist, nehmen wir den als Start
+  const firstIn = (takes[0].tcIn || "").trim();
+  if (firstIn) {
+    cursor = parseTimecode(firstIn);
+  }
+
   takes.forEach(t => {
-    const manualIn = t.tcIn && t.tcIn.trim().length > 0;
-    const startFrames = manualIn ? parseTimecode(t.tcIn) : cursor;
+    const startFrames = cursor;
     t.tcIn = formatTimecode(startFrames);
+
     const durSec = estimateDurationSeconds(t.speaker || "");
     const endFrames = startFrames + durSec * TC_FPS;
+
     t.tcOut = formatTimecode(endFrames);
-    cursor = endFrames;
+    cursor = endFrames; // nächster Take setzt hier auf
   });
+}
+
+// Aktualisiert nur die TC-Felder im DOM, ohne Tabelle neu zu bauen
+function updateTimecodesInDom() {
+  const takes = currentProject.takes || [];
+  takes.forEach((t, idx) => {
+    const inInput = document.querySelector(
+      `input[data-field="tcIn"][data-index="${idx}"]`
+    );
+    const outInput = document.querySelector(
+      `input[data-field="tcOut"][data-index="${idx}"]`
+    );
+    if (inInput) inInput.value = t.tcIn || "";
+    if (outInput) outInput.value = t.tcOut || "";
+  });
+}
+
+// Komfort-Helfer: Berechnen + DOM aktualisieren
+function recalcTimecodesAndUpdateDom() {
+  recalcTimecodes();
+  updateTimecodesInDom();
 }
 
 // --------- DOCX-Import ---------
