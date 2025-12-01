@@ -1,40 +1,35 @@
 // server.js
+// Minimaler Express-Server für Storyboard Studio
+
 const express = require("express");
 const path = require("path");
+const cors = require("cors");
+const cookieParser = require("cookie-parser");
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Request-Body als JSON erlauben (falls du später APIs brauchst)
+// Middleware
+app.use(cors());
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Statische Dateien aus /public
-app.use(express.static(path.join(__dirname, "public")));
+// Statische Dateien aus /public ausliefern
+const publicDir = path.join(__dirname, "public");
+app.use(express.static(publicDir));
 
-// Startseite: Index
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+// Health-Check (kannst du z.B. in Render bei "Health Check Path" eintragen)
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok", service: "storyboard-studio" });
 });
 
-// Projektseite: Editor
-// WICHTIG: diese Route VOR einer evtl. Catch-All-Route definieren!
-app.get("/project.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "project.html"));
-});
-
-// (Optional) Admin-Seite, falls du später eine eigene HTML-Datei hast
-// app.get("/admin.html", (req, res) => {
-//   res.sendFile(path.join(__dirname, "public", "admin.html"));
-// });
-
-// Fallback: alles, was wir nicht kennen, auf die Startseite schicken.
-// Wenn du irgendwann ein Frontend-Routing hast (z.B. React), bleibt das hilfreich.
-// Diese Route MUSS als letzte kommen.
+// Fallback: immer index.html zurückgeben (Single-Page-App)
 app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+  res.sendFile(path.join(publicDir, "index.html"));
 });
 
+// Server starten
 app.listen(PORT, () => {
-  console.log(`Storyboard Studio Server läuft auf Port ${PORT}`);
+  console.log(`Storyboard Studio läuft auf Port ${PORT}`);
 });
