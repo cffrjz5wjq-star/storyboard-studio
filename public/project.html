@@ -208,15 +208,13 @@
 
 <!-- Haupt-Editor-Logik -->
 <script>
-<script>
 // =============================================
 // Storyboard Studio – Projekt-Editor
 // =============================================
 
-// Konstante: Timecode-Basis
 const TC_FPS = 25;
 
-// Kleine Hilfsfunktionen
+// --------- Helper ---------
 function $(id) { return document.getElementById(id); }
 
 function loadJSON(key, fallback) {
@@ -224,20 +222,24 @@ function loadJSON(key, fallback) {
     const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : fallback;
   } catch (e) {
-    console.error("Fehler beim Lesen von", key, e);
+    console.error("loadJSON", key, e);
     return fallback;
   }
 }
 
 function saveJSON(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    console.error("saveJSON", key, e);
+  }
 }
 
 function safeKey(str) {
   return String(str || "").toLowerCase().replace(/[^a-z0-9]+/g, "_");
 }
 
-// Timecode-Helfer
+// --------- Timecode helper ---------
 function parseTimecode(tc) {
   if (!tc) return 0;
   const parts = tc.split(":").map(Number);
@@ -258,26 +260,32 @@ function formatTimecode(frames) {
   return `${pad(h)}:${pad(m)}:${pad(s)}:${pad(f)}`;
 }
 
-// Sehr grobe Dauer-Schätzung aus Sprechertext
 function estimateDurationSeconds(text) {
   if (!text) return 0;
   const words = text.trim().split(/\s+/).length;
-  const wps = 3.0; // Wörter pro Sekunde (ca.)
+  const wps = 3.0; // grob
   return Math.ceil(words / wps);
 }
 
-// Globale Variablen für dieses Projekt
+// --------- Projekt / Storage ---------
 let currentProject = null;
 let projectsKey = null;
 let archiveKey = null;
 
-// Session / User auslesen
 function getCurrentUserEmail() {
   const session = loadJSON("sb_session", null);
   return session && session.email ? session.email : "local_guest";
 }
 
-// Projekte-Liste für diesen User
+function getProjectIdFromUrl() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    return params.get("projectId");
+  } catch {
+    return null;
+  }
+}
+
 function loadProjectsForEditor() {
   if (!projectsKey) return [];
   return loadJSON(projectsKey, []);
@@ -288,60 +296,61 @@ function saveProjectsForEditor(list) {
   saveJSON(projectsKey, list);
 }
 
-// Aktuelles Projekt im LocalStorage & Projektliste aktualisieren
-function persistCurrentProject() {
-  if (!currentProject) return;
-  const list = loadProjectsForEditor();
-  const idx = list.findIndex(p => p.id === currentProject.id);
-  if (idx >= 0) {
-    list[idx] = currentProject;
-  } else {
-    list.push(currentProject);
-  }
-  saveProjectsForEditor(list);
-  saveJSON("sb_active_project", currentProject);
+function createEmptyProject() {
+  const now = new Date().toISOString();
+  return {
+    id: "proj_" + Date.now().toString(36),
+    title: "Unbenanntes Projekt",
+    editor: "",
+    cvd: "",
+    area: "",
+    show: "",
+    format: "",
+    shortDesc: "",
+    notes: "",
+    createdAt: now,
+    updatedAt: now,
+    takes: []
+  };
 }
 
-// Projekt aus LocalStorage initialisieren
 function initProjectFromStorage() {
   const email = getCurrentUserEmail();
   projectsKey = "sb_projects_" + safeKey(email);
   archiveKey = projectsKey + "_archiv";
 
-  let active = loadJSON("sb_active_project", null);
-  const list = loadProjectsForEditor();
+  const all = loadProjectsForEditor();
+  const urlId = getProjectIdFromUrl();
+  let active = null;
 
-  if (!active && list.length) {
-    active = list[0];
-    saveJSON("sb_active_project", active);
+  if (urlId) {
+    active = all.find(p => p.id === urlId) || null;
   }
 
   if (!active) {
-    active = {
-      id: "tmp_" + Date.now().toString(36),
-      title: "Unbenanntes Projekt",
-      editor: "",
-      cvd: "",
-      area: "",
-      show: "",
-      format: "",
-      shortDesc: "",
-      notes: "",
-      createdAt: new Date().toISOString(),
-      takes: []
-    };
+    active = loadJSON("sb_active_project", null);
   }
 
+  if (!active && all.length) {
+    active = all[0];
+  }
+
+  if (!active) {
+    active = createEmptyProject();
+    all.push(active);
+    saveProjectsForEditor(all);
+  }
+
+  if (!Array.isArray(active.takes)) active.takes = [];
+
   currentProject = active;
-  if (!Array.isArray(currentProject.takes)) currentProject.takes = [];
+  saveJSON("sb_active_project", active);
 
   hydrateUiFromProject();
 }
 
-// UI mit Projekt-Daten füllen
 function hydrateUiFromProject() {
   const p = currentProject || {};
-
   $("peTitle").value  = p.title     || "";
   $("peEditor").value = p.editor    || "";
   $("peCvd").value    = p.cvd       || "";
@@ -363,7 +372,6 @@ function hydrateUiFromProject() {
   renderTakesTable();
 }
 
-// Projekt-Metadaten aus Formular zurück in Objekt
 function syncProjectMetaFromUi() {
   if (!currentProject) return;
   const p = currentProject;
@@ -378,7 +386,21 @@ function syncProjectMetaFromUi() {
   p.updatedAt = new Date().toISOString();
 }
 
-// Tabelle der Takes rendern
+// Projektliste + aktives Projekt im Storage aktualisieren
+function persistCurrentProject() {
+  if (!currentProject) return;
+  const all = loadProjectsForEditor();
+  const idx = all.findIndex(p => p.id === currentProject.id);
+  if (idx >= 0) {
+    all[idx] = currentProject;
+  } else {
+    all.push(currentProject);
+  }
+  saveProjectsForEditor(all);
+  saveJSON("sb_active_project", currentProject);
+}
+
+// --------- Takes-Rendering ---------
 function renderTakesTable() {
   const tbody = $("takesBody");
   tbody.innerHTML = "";
@@ -429,9 +451,9 @@ function renderTakesTable() {
       </td>
     `;
 
-    // Klick zum Selektieren der Zeile
+    // Zeile auswählen
     tr.addEventListener("click", (e) => {
-      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.type === "file") return;
+      if (["INPUT", "TEXTAREA", "LABEL"].includes(e.target.tagName) || e.target.type === "file") return;
       tr.classList.toggle("row-selected");
     });
 
@@ -457,7 +479,7 @@ function renderTakesTable() {
     tbody.appendChild(tr);
   });
 
-  // Inputs verbinden
+  // Feld-Events
   tbody.querySelectorAll("input[data-field], textarea[data-field]").forEach(el => {
     el.addEventListener("input", () => {
       const index = parseInt(el.dataset.index, 10);
@@ -475,19 +497,18 @@ function renderTakesTable() {
     });
   });
 
-  // Bild-Upload
+  // Bild-Uploads
   tbody.querySelectorAll("input[data-image-index]").forEach(input => {
     input.addEventListener("change", handleImageUpload);
   });
 
-  // Thumbnails rendern
+  // Thumbs rendern
   currentProject.takes.forEach((t, idx) => renderThumbnailsForTake(idx));
 
-  // Spalten-Einstellungen anwenden
+  // Spaltenzustand anwenden
   applyColumnVisibilityFromToggles();
 }
 
-// Neuen leeren Take anhängen
 function addEmptyTake() {
   if (!currentProject.takes) currentProject.takes = [];
   const idx = currentProject.takes.length;
@@ -507,7 +528,6 @@ function addEmptyTake() {
   persistCurrentProject();
 }
 
-// Ausgewählte Takes löschen
 function deleteSelectedTakes() {
   const tbody = $("takesBody");
   const rows = Array.from(tbody.querySelectorAll("tr.row-selected"));
@@ -531,7 +551,6 @@ function deleteSelectedTakes() {
   persistCurrentProject();
 }
 
-// Takes per Drag & Drop umsortieren
 function reorderTake(from, to) {
   const arr = currentProject.takes;
   if (from === to) return;
@@ -551,26 +570,21 @@ function reorderTake(from, to) {
   persistCurrentProject();
 }
 
-// Timecodes neu berechnen
 function recalcTimecodes() {
   const takes = currentProject.takes || [];
   let cursor = 0;
-
   takes.forEach(t => {
-    const hasManualIn = t.tcIn && t.tcIn.trim().length > 0;
-    const startFrames = hasManualIn ? parseTimecode(t.tcIn) : cursor;
+    const manualIn = t.tcIn && t.tcIn.trim().length > 0;
+    const startFrames = manualIn ? parseTimecode(t.tcIn) : cursor;
     t.tcIn = formatTimecode(startFrames);
-
     const durSec = estimateDurationSeconds(t.speaker || "");
-    const durFrames = durSec * TC_FPS;
-    const endFrames = startFrames + durFrames;
-
+    const endFrames = startFrames + durSec * TC_FPS;
     t.tcOut = formatTimecode(endFrames);
     cursor = endFrames;
   });
 }
 
-// DOCX in HTML umwandeln und passende Takes erzeugen
+// --------- DOCX-Import ---------
 function parseDocxHtmlToTakes(html) {
   const container = document.createElement("div");
   container.innerHTML = html;
@@ -585,18 +599,8 @@ function parseDocxHtmlToTakes(html) {
         const cells = Array.from(row.querySelectorAll("th,td")).map(c => c.textContent.trim());
         const joined = cells.join("").trim();
         if (!joined) return;
-
-        // Kopfzeile überspringen
         if (idx === 0 && /take|sprecher/i.test(joined)) return;
 
-        // Mapping (einfach, aber praxistauglich):
-        // 0: Take / lfd. Nr
-        // 1: Bild/Kamera
-        // 2: Sprechertext
-        // 3: Personen
-        // 4: Notizen
-        // 5: Musik
-        // 6: Herkunft
         const t = {
           take: cells[0] || String(takes.length + 1),
           tcIn: "",
@@ -613,7 +617,6 @@ function parseDocxHtmlToTakes(html) {
       });
     });
   } else {
-    // Fallback: Absätze als einzelne Takes verwenden
     const paras = container.querySelectorAll("p");
     paras.forEach(p => {
       const text = p.textContent.trim();
@@ -635,7 +638,6 @@ function parseDocxHtmlToTakes(html) {
   return takes;
 }
 
-// DOCX-Datei importieren
 function handleDocxImport() {
   const file = $("docxFile").files && $("docxFile").files[0];
   if (!file) {
@@ -660,7 +662,6 @@ function handleDocxImport() {
       }
 
       currentProject.takes = (currentProject.takes || []).concat(imported);
-
       if ($("chkAutoRenumber").checked) {
         currentProject.takes.forEach((t, i) => t.take = String(i + 1));
       }
@@ -682,11 +683,10 @@ function handleDocxImport() {
   reader.readAsArrayBuffer(file);
 }
 
-// Spalten ein-/ausblenden
+// --------- Spalten / Bilder / PDF ---------
 function applyColumnVisibilityFromToggles() {
   const table = $("takesTable");
   if (!table) return;
-
   document.querySelectorAll("[data-col-toggle]").forEach(cb => {
     const col = cb.getAttribute("data-col-toggle");
     const visible = cb.checked;
@@ -696,7 +696,6 @@ function applyColumnVisibilityFromToggles() {
   });
 }
 
-// Bilder-Upload
 function handleImageUpload(e) {
   const input = e.target;
   const idx = parseInt(input.dataset.imageIndex, 10);
@@ -726,7 +725,6 @@ function handleImageUpload(e) {
   });
 }
 
-// Bild auf max. 1920x1080 skalieren
 function resizeImageTo1920x1080(img) {
   const maxW = 1920;
   const maxH = 1080;
@@ -743,13 +741,11 @@ function resizeImageTo1920x1080(img) {
   return canvas.toDataURL("image/jpeg", 0.9);
 }
 
-// Thumbnails rendern
 function renderThumbnailsForTake(idx) {
   const take = currentProject.takes[idx];
   const container = $("thumbs-" + idx);
   if (!container) return;
   container.innerHTML = "";
-
   if (!take.images) return;
   take.images.slice(0, 4).forEach((src, i) => {
     const img = document.createElement("img");
@@ -760,13 +756,11 @@ function renderThumbnailsForTake(idx) {
   });
 }
 
-// Lightbox öffnen & schließen
 function openLightbox(src) {
   $("lightboxImg").src = src;
   $("lightbox").classList.remove("hidden");
 }
 
-// Export der aktuellen Ansicht als Druck/PDF (Browserdruck)
 function exportCurrentViewToPdf() {
   const toggles = document.querySelectorAll("[data-col-toggle]");
   const visibleCols = Array.from(toggles)
@@ -853,67 +847,73 @@ function exportCurrentViewToPdf() {
   w.print();
 }
 
-// Projekt löschen / archivieren
+// --------- Projekt löschen / archivieren ---------
 function deleteOrArchiveProject() {
   if (!currentProject) return;
   if (!confirm("Projekt ins Archiv verschieben und aus der aktiven Liste entfernen?")) return;
 
-  const list = loadProjectsForEditor();
-  const idx = list.findIndex(p => p.id === currentProject.id);
+  const all = loadProjectsForEditor();
+  const idx = all.findIndex(p => p.id === currentProject.id);
   if (idx >= 0) {
-    const [proj] = list.splice(idx, 1);
+    const [proj] = all.splice(idx, 1);
     proj.archivedAt = new Date().toISOString();
-    saveProjectsForEditor(list);
-
+    saveProjectsForEditor(all);
     const archList = loadJSON(archiveKey, []);
     archList.push(proj);
     saveJSON(archiveKey, archList);
   }
 
-  // aktives Projekt zurücksetzen
   localStorage.removeItem("sb_active_project");
   alert("Projekt wurde ins Archiv verschoben.");
   window.location.href = "index.html";
 }
 
-// Events verbinden
+// --------- Events / Init ---------
 function setupEvents() {
-  $("btnSaveProject").addEventListener("click", () => {
+  const btnSave = $("btnSaveProject");
+  if (btnSave) btnSave.addEventListener("click", () => {
     syncProjectMetaFromUi();
     persistCurrentProject();
     alert("Projekt gespeichert.");
   });
 
-  $("btnAddTake").addEventListener("click", addEmptyTake);
-  $("btnDeleteSelected").addEventListener("click", deleteSelectedTakes);
+  const btnAdd = $("btnAddTake");
+  if (btnAdd) btnAdd.addEventListener("click", addEmptyTake);
 
-  $("btnRecalcTc").addEventListener("click", () => {
+  const btnDelSel = $("btnDeleteSelected");
+  if (btnDelSel) btnDelSel.addEventListener("click", deleteSelectedTakes);
+
+  const btnTc = $("btnRecalcTc");
+  if (btnTc) btnTc.addEventListener("click", () => {
     recalcTimecodes();
     renderTakesTable();
     persistCurrentProject();
   });
 
-  $("btnImportDocx").addEventListener("click", handleDocxImport);
-  $("btnExportPdf").addEventListener("click", exportCurrentViewToPdf);
+  const btnDocx = $("btnImportDocx");
+  if (btnDocx) btnDocx.addEventListener("click", handleDocxImport);
 
-  $("btnDeleteProject").addEventListener("click", deleteOrArchiveProject);
+  const btnPdf = $("btnExportPdf");
+  if (btnPdf) btnPdf.addEventListener("click", exportCurrentViewToPdf);
+
+  const btnDelProj = $("btnDeleteProject");
+  if (btnDelProj) btnDelProj.addEventListener("click", deleteOrArchiveProject);
 
   document.querySelectorAll("[data-col-toggle]").forEach(cb => {
     cb.addEventListener("change", applyColumnVisibilityFromToggles);
   });
 
-  $("lightbox").addEventListener("click", () => {
-    $("lightbox").classList.add("hidden");
+  const lb = $("lightbox");
+  if (lb) lb.addEventListener("click", () => {
+    lb.classList.add("hidden");
     $("lightboxImg").src = "";
   });
 }
 
-// Initialisierung
 document.addEventListener("DOMContentLoaded", () => {
   initProjectFromStorage();
   setupEvents();
 });
-</script>
 </script>
 
 </body>
