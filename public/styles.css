@@ -295,3 +295,60 @@ td.hidden-col {
     padding-inline: 0.75rem;
   }
 }
+/* Zeilen-Auswahl + Drag-Drop */
+
+.takes-table tr.row-selected {
+  background: #fef3c7;
+}
+
+.takes-table tr.dragging {
+  opacity: 0.5;
+}
+
+.takes-table tr.drag-over {
+  outline: 2px dashed var(--accent, #ff8a3c);
+}
+
+/* Spalten ausblenden */
+
+th.hidden-col,
+td.hidden-col {
+  display: none;
+}
+
+/* Spalten-Toggles */
+
+.column-toggle-bar label {
+  margin-right: 0.45rem;
+  font-size: 0.78rem;
+}
+
+/* Bilder / File-Input */
+
+.hidden-file {
+  display: none;
+}
+
+/* Lightbox */
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.lightbox-inner {
+  max-width: 90vw;
+  max-height: 90vh;
+}
+
+.lightbox-inner img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+}
