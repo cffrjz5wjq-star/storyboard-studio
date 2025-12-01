@@ -337,3 +337,50 @@ window.addEventListener("DOMContentLoaded", () => {
   renderProjectMeta();
   renderTakesTable();
 });
+// app.js
+
+// Kleine Hilfsfunktionen
+function safeKey(str) {
+  return String(str || "").toLowerCase().replace(/[^a-z0-9]+/g, "_");
+}
+
+function loadJSON(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (e) {
+    console.error("Fehler beim Lesen von", key, e);
+    return fallback;
+  }
+}
+
+function saveJSON(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+// Angemeldeter User (wie bei dir auf dem Dashboard angezeigt)
+function getCurrentUserEmail() {
+  const session = loadJSON("sb_session", null);
+  if (session && session.email) return session.email;
+  // Fallback, wenn du noch kein Login fertig hast
+  return "local_guest";
+}
+
+// Zentrales Projekt-Open
+function openProjectById(projectId) {
+  const email = getCurrentUserEmail();
+  const projectsKey = "sb_projects_" + safeKey(email);
+  const projects = loadJSON(projectsKey, []);
+
+  const project = projects.find(p => p.id === projectId);
+  if (!project) {
+    alert("Projekt mit dieser ID wurde nicht gefunden.");
+    return;
+  }
+
+  // aktives Projekt im LocalStorage merken
+  saveJSON("sb_active_project", project);
+
+  // zur Editor-Seite springen
+  window.location.href = "project.html";
+}
