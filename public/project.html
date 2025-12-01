@@ -486,14 +486,27 @@ function renderTakesTable() {
       const field = el.dataset.field;
       const t = currentProject.takes[index];
       if (!t) return;
+
       t[field] = el.value;
-      if (field === "speaker" && $("chkAutoTc").checked) {
+      const autoTc = $("chkAutoTc").checked;
+
+      // Bei Sprechertext oder manuell gesetzten In-Timecodes
+      // Timecodes neu berechnen, aber Tabelle nicht komplett neu aufbauen
+      if (autoTc && (field === "speaker" || field === "tcIn")) {
         recalcTimecodes();
-        renderTakesTable();
-        persistCurrentProject();
-      } else {
-        persistCurrentProject();
+
+        // Nur die In/Out-Felder in der existierenden Tabelle aktualisieren
+        currentProject.takes.forEach((take, i) => {
+          const row = tbody.querySelector(`tr[data-index="${i}"]`);
+          if (!row) return;
+          const inInput  = row.querySelector('input[data-field="tcIn"]');
+          const outInput = row.querySelector('input[data-field="tcOut"]');
+          if (inInput)  inInput.value  = take.tcIn || "";
+          if (outInput) outInput.value = take.tcOut || "";
+        });
       }
+
+      persistCurrentProject();
     });
   });
 
@@ -586,55 +599,76 @@ function recalcTimecodes() {
 
 // --------- DOCX-Import ---------
 function parseDocxHtmlToTakes(html) {
-  const container = document.createElement("div");
-  container.innerHTML = html;
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
 
-  const tables = container.querySelectorAll("table");
+  const tables = Array.from(doc.querySelectorAll("table"));
   const takes = [];
 
   if (tables.length) {
-    tables.forEach(table => {
-      const rows = table.querySelectorAll("tr");
-      rows.forEach((row, idx) => {
-        const cells = Array.from(row.querySelectorAll("th,td")).map(c => c.textContent.trim());
-        const joined = cells.join("").trim();
-        if (!joined) return;
-        if (idx === 0 && /take|sprecher/i.test(joined)) return;
+    tables.forEach((table) => {
+      const rows = Array.from(table.rows || table.querySelectorAll("tr"));
+      if (!rows.length) return;
 
-        const t = {
-          take: cells[0] || String(takes.length + 1),
-          tcIn: "",
-          tcOut: "",
-          camera: cells[1] || "",
-          speaker: cells[2] || "",
-          persons: cells[3] || "",
-          notes: cells[4] || "",
-          music: cells[5] || "",
-          source: cells[6] || "",
-          images: []
-        };
-        takes.push(t);
-      });
+      // optional: Titelzeile "TITEL: ..." als Szenen-/Filmname merken
+      let sceneTitle = "";
+      const firstCellText =
+        (rows[0].cells[0] && rows[0].cells[0].textContent || "").trim();
+      if (/TITEL:/i.test(firstCellText)) {
+        sceneTitle = firstCellText.replace(/TITEL:\s*/i, "").trim();
+      }
+
+      // ab Zeile 1, weil Zeile 0 häufig Kopf/TITEL enthält
+      for (let ri = 1; ri < rows.length; ri++) {
+        const row = rows[ri];
+        if (!row.cells || row.cells.length < 2) continue;
+
+        const left  = (row.cells[0].textContent || "").trim();
+        const right = (row.cells[1].textContent || "").trim();
+        if (!left && !right) continue;
+
+        const combined = (left + " " + right).toLowerCase();
+
+        // Kopfzeilen wie "Beschreibung / IDEE | Sprechertext" überspringen
+        if (combined.match(/beschreibung|idee|sprechertext/)) continue;
+
+        takes.push({
+          take:    String(takes.length + 1),
+          tcIn:    "",
+          tcOut:   "",
+          camera:  left,   // linke Spalte = Bild/Kamera
+          speaker: right,  // rechte Spalte = Sprechertext
+          persons: "",
+          notes:   sceneTitle || "",
+          music:   "",
+          source:  "",
+          images:  []
+        });
+      }
     });
-  } else {
-    const paras = container.querySelectorAll("p");
-    paras.forEach(p => {
-      const text = p.textContent.trim();
-      if (!text) return;
-      takes.push({
-        take: String(takes.length + 1),
-        tcIn: "",
-        tcOut: "",
-        camera: "",
-        speaker: text,
-        persons: "",
-        notes: "",
-        music: "",
-        source: "",
-        images: []
-      });
-    });
+
+    return takes;
   }
+
+  // Fallback: keine Tabellen -> jeden Absatz als Sprecherzeile
+  const paras = doc.querySelectorAll("p");
+  paras.forEach(p => {
+    const text = p.textContent.trim();
+    if (!text) return;
+    takes.push({
+      take:    String(takes.length + 1),
+      tcIn:    "",
+      tcOut:   "",
+      camera:  "",
+      speaker: text,
+      persons: "",
+      notes:   "",
+      music:   "",
+      source:  "",
+      images:  []
+    });
+  });
+
   return takes;
 }
 
