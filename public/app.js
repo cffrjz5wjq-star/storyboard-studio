@@ -384,3 +384,15 @@ function openProjectById(projectId) {
   // zur Editor-Seite springen
   window.location.href = "project.html";
 }
+document.addEventListener("DOMContentLoaded", function () {
+  // Projekt-Buttons anklemmen
+  document.querySelectorAll(".project-card").forEach(card => {
+    const projectId = card.getAttribute("data-project-id");
+    const openBtn = card.querySelector(".project-open-btn");
+    if (!openBtn || !projectId) return;
+
+    openBtn.addEventListener("click", () => {
+      openProjectById(projectId);
+    });
+  });
+});
