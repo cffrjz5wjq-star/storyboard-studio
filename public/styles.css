@@ -538,3 +538,33 @@ tr.drag-over {
 .hidden {
   display: none !important;
 }
+/* Breiterer Projektbereich */
+.project-main {
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+/* Tabelle notfalls horizontal scrollbar machen */
+.table-wrapper {
+  overflow-x: auto;
+}
+
+/* Spalten für Bild/Kamera und Sprechertext größer machen */
+.takes-table th[data-col="camera"],
+.takes-table td[data-col="camera"] {
+  min-width: 260px;
+}
+
+.takes-table th[data-col="speaker"],
+.takes-table td[data-col="speaker"] {
+  min-width: 420px;
+}
+
+/* Sticky-Kopf (Vorbereitung, wenn du das willst) */
+.project-main .card:nth-of-type(2) .card-header,
+.project-main .card:nth-of-type(2) .toolbar {
+  position: sticky;
+  top: 56px;          /* ggf. an deinen Header anpassen */
+  z-index: 20;
+  background: #ffffff;
+}
