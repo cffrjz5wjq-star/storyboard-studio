@@ -30,6 +30,26 @@ app.get("*", (req, res) => {
 });
 
 // Server starten
+app.get("/test-supabase", async (req, res) => {
+  try {
+    const { createClient } = require("@supabase/supabase-js");
+
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
+    const { data, error } = await supabase.from("pg_tables").select("*").limit(1);
+
+    res.json({
+      connected: error ? false : true,
+      error,
+      data,
+    });
+  } catch (err) {
+    res.json({ connected: false, error: err.message });
+  }
+});
 app.listen(PORT, () => {
   console.log(`Storyboard Studio läuft auf Port ${PORT}`);
 });
