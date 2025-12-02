@@ -295,3 +295,20 @@ document.addEventListener("DOMContentLoaded", () => {
     showAuthView();
   }
 });
+app.get("/test-supabase", async (req, res) => {
+  try {
+    const { createClient } = require("@supabase/supabase-js");
+
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
+    // einfache Anfrage: bekommt Metadaten zurück
+    const { data, error } = await supabase.from("pg_tables").select("*").limit(1);
+
+    res.json({ success: !error, data, error });
+  } catch (err) {
+    res.json({ success: false, message: err.message });
+  }
+});
