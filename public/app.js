@@ -1,27 +1,28 @@
 // public/app.js
 (() => {
-  // Passe diese Selectors ggf. an deine echten IDs/Inputs an:
   const S = {
     // Buttons
-    saveBtn: "#saveProjectBtn",
-    clearBtn: "#clearFormBtn",
+    saveBtn: "#btnCreateProject",
+    clearBtn: "#btnResetProjectForm",
+    newTop: "#btnNewProjectTop",
+    newTile: "#btnNewProjectTile",
 
-    // Form fields
-    name: "#projectName",
-    redaktion: "#redaktion",
-    cvd: "#cvd",
-    bereich: "#bereich",
-    sendung: "#sendung",
-    format: "#format",
-    zielgruppe: "#zielgruppe",
-    team: "#team",
-    kurzbeschreibung: "#kurzbeschreibung",
+    // Form fields (deine IDs)
+    name: "#npTitle",
+    redaktion: "#npEditor",
+    cvd: "#npCvd",
+    bereich: "#npArea",
+    sendung: "#npShow",
+    format: "#npFormat",
+    zielgruppe: "#npTarget",
+    team: "#npTeam",
+    kurzbeschreibung: "#npShort",
 
     // Right panel list
     listContainer: "#projectList",
 
-    // Optional: Anzeige aktuelles Projekt
-    currentTitle: "#currentProjectTitle",
+    // Anzeige aktuelles Projekt
+    currentSubtitle: "#currentProjectSubtitle",
   };
 
   const el = (sel) => document.querySelector(sel);
@@ -31,9 +32,8 @@
     projects: [],
   };
 
-  function getFormData() {
+  function getFormPayload() {
     const name = (el(S.name)?.value ?? "").trim();
-
     return {
       name,
       data: {
@@ -49,9 +49,14 @@
     };
   }
 
-  function setFormData(project) {
+  function setFormFromProject(project) {
     state.selectedId = project?.id ?? null;
-    if (el(S.currentTitle)) el(S.currentTitle).textContent = project?.name ?? "—";
+
+    if (el(S.currentSubtitle)) {
+      el(S.currentSubtitle).textContent = project?.name
+        ? `Ausgewählt: ${project.name}`
+        : "Noch kein Projekt ausgewählt.";
+    }
 
     if (el(S.name)) el(S.name).value = project?.name ?? "";
 
@@ -68,9 +73,15 @@
 
   function clearForm() {
     state.selectedId = null;
-    if (el(S.currentTitle)) el(S.currentTitle).textContent = "—";
 
-    [S.name, S.redaktion, S.cvd, S.bereich, S.sendung, S.format, S.zielgruppe, S.team, S.kurzbeschreibung]
+    if (el(S.currentSubtitle)) {
+      el(S.currentSubtitle).textContent = "Noch kein Projekt ausgewählt.";
+    }
+
+    [
+      S.name, S.redaktion, S.cvd, S.bereich, S.sendung,
+      S.format, S.zielgruppe, S.team, S.kurzbeschreibung
+    ]
       .map(el)
       .filter(Boolean)
       .forEach((x) => (x.value = ""));
@@ -84,10 +95,7 @@
     const txt = await res.text();
     let json = null;
     try { json = txt ? JSON.parse(txt) : null; } catch {}
-    if (!res.ok) {
-      const msg = json?.error ?? `HTTP ${res.status}`;
-      throw new Error(msg);
-    }
+    if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
     return json;
   }
 
@@ -107,23 +115,36 @@
 
     state.projects.forEach((p) => {
       const row = document.createElement("div");
-      row.style.display = "flex";
-      row.style.justifyContent = "space-between";
-      row.style.alignItems = "center";
-      row.style.gap = "10px";
-      row.style.padding = "6px 0";
+      row.className = "project-item";
+
+      const main = document.createElement("div");
+      main.className = "project-item-main";
 
       const title = document.createElement("div");
+      title.className = "project-item-title";
       title.textContent = p.name;
       title.style.cursor = "pointer";
       title.onclick = () => openProject(p.id);
 
+      const meta = document.createElement("div");
+      meta.className = "project-item-meta";
+      meta.textContent = (p.data?.redaktion || p.data?.sendung || "").toString();
+
+      main.appendChild(title);
+      main.appendChild(meta);
+
+      const actions = document.createElement("div");
+      actions.className = "project-item-actions";
+
       const btn = document.createElement("button");
+      btn.className = "small";
       btn.textContent = "Öffnen";
       btn.onclick = () => openProject(p.id);
 
-      row.appendChild(title);
-      row.appendChild(btn);
+      actions.appendChild(btn);
+
+      row.appendChild(main);
+      row.appendChild(actions);
 
       container.appendChild(row);
     });
@@ -136,13 +157,13 @@
 
   async function openProject(id) {
     const project = await api(`/api/projects/${id}`);
-    setFormData(project);
+    setFormFromProject(project);
   }
 
   async function saveProject() {
-    const payload = getFormData();
+    const payload = getFormPayload();
     if (!payload.name) {
-      alert("Bitte Projektname ausfüllen.");
+      alert("Bitte Projekttitel ausfüllen.");
       return;
     }
 
@@ -151,13 +172,13 @@
         method: "PUT",
         body: JSON.stringify(payload),
       });
-      setFormData(updated);
+      setFormFromProject(updated);
     } else {
       const created = await api("/api/projects", {
         method: "POST",
         body: JSON.stringify(payload),
       });
-      setFormData(created);
+      setFormFromProject(created);
     }
 
     await loadProjects();
@@ -173,14 +194,22 @@
       e.preventDefault();
       clearForm();
     });
+
+    el(S.newTop)?.addEventListener("click", (e) => {
+      e.preventDefault();
+      clearForm();
+      el(S.name)?.focus?.();
+    });
+
+    el(S.newTile)?.addEventListener("click", (e) => {
+      e.preventDefault();
+      clearForm();
+      el(S.name)?.focus?.();
+    });
   }
 
-  async function init() {
+  document.addEventListener("DOMContentLoaded", async () => {
     wire();
     await loadProjects();
-  }
-
-  document.addEventListener("DOMContentLoaded", () => {
-    init().catch((err) => console.error(err));
   });
 })();
