@@ -5,6 +5,7 @@
   <title>Storyboard Studio – Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
+
   <style>
     .hidden { display: none !important; }
     .dashboard-main {
@@ -14,9 +15,7 @@
       gap: 0.9rem;
     }
     @media (max-width: 980px) {
-      .dashboard-main {
-        grid-template-columns: minmax(0,1fr);
-      }
+      .dashboard-main { grid-template-columns: minmax(0,1fr); }
     }
     .dashboard-grid {
       display: grid;
@@ -33,14 +32,8 @@
       flex-direction: column;
       gap: 0.25rem;
     }
-    .dashboard-tile-title {
-      font-size: 0.85rem;
-      font-weight: 600;
-    }
-    .dashboard-tile-text {
-      font-size: 0.78rem;
-      color: var(--text-muted);
-    }
+    .dashboard-tile-title { font-size: 0.85rem; font-weight: 600; }
+    .dashboard-tile-text { font-size: 0.78rem; color: var(--text-muted); }
     .project-list {
       display: flex;
       flex-direction: column;
@@ -57,9 +50,7 @@
       align-items: center;
       gap: 0.4rem;
     }
-    .project-item-main {
-      min-width: 0;
-    }
+    .project-item-main { min-width: 0; }
     .project-item-title {
       font-size: 0.85rem;
       font-weight: 500;
@@ -74,11 +65,7 @@
       text-overflow: ellipsis;
       overflow: hidden;
     }
-    .project-item-actions {
-      display: flex;
-      gap: 0.3rem;
-      flex-shrink: 0;
-    }
+    .project-item-actions { display: flex; gap: 0.3rem; flex-shrink: 0; }
     .field-grid-2 {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
@@ -99,172 +86,181 @@
       padding: 0.3rem 0.4rem;
       font-size: 0.8rem;
     }
-    .field textarea {
-      min-height: 60px;
-      resize: vertical;
-    }
-    .auth-card {
-      max-width: 420px;
-      margin: 3rem auto;
-    }
+    .field textarea { min-height: 60px; resize: vertical; }
+    .auth-card { max-width: 420px; margin: 3rem auto; }
   </style>
+
+  <!-- Wichtig: Script NICHT in <style> -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script src="app.js" defer></script>
 </head>
+
 <body>
-<div class="app-shell">
-  <div class="app project-app">
-    <header class="project-header">
-      <div class="header-left">
-        <div class="logo-badge">SB</div>
-        <div>
-          <div class="header-title">Storyboard Studio</div>
-          <div class="header-subtitle">Projekte, Storyboards und Sprechertexte verwalten</div>
-        </div>
-      </div>
-      <div class="header-user">
-        <span class="user-label" id="userInfo">Nicht eingeloggt</span>
-        <button type="button" id="btnLogout" class="small secondary hidden">Abmelden</button>
-      </div>
-    </header>
-
-    <!-- Login / Registrierung -->
-    <main id="authView" class="project-main">
-      <section class="card auth-card">
-        <div class="card-header">
+  <div class="app-shell">
+    <div class="app project-app">
+      <header class="project-header">
+        <div class="header-left">
+          <div class="logo-badge">SB</div>
           <div>
-            <div class="card-title">Anmeldung</div>
-            <div class="card-subtitle">Admin oder Nutzerkonto verwenden</div>
+            <div class="header-title">Storyboard Studio</div>
+            <div class="header-subtitle">Projekte, Storyboards und Sprechertexte verwalten</div>
           </div>
         </div>
-        <div class="field">
-          <label for="loginEmail">E-Mail-Adresse</label>
-          <input id="loginEmail" type="email" placeholder="z.&nbsp;B. admin@stefanweichelt.de" />
+        <div class="header-user">
+          <span class="user-label" id="userInfo">Nicht eingeloggt</span>
+          <button type="button" id="btnLogout" class="small secondary hidden">Abmelden</button>
         </div>
-        <div class="field" style="margin-top:0.45rem;">
-          <label for="loginPassword">Passwort</label>
-          <input id="loginPassword" type="password" placeholder="Passwort" />
-        </div>
-        <div class="field" style="margin-top:0.7rem; display:flex; gap:0.4rem;">
-          <button id="btnLogin" type="button" class="primary">Einloggen</button>
-          <button id="btnRegister" type="button" class="secondary">Registrieren</button>
-        </div>
-        <p class="hint" style="margin-top:0.7rem;">
-          Admin-Login: <code>admin@stefanweichelt.de</code> &ndash; das Passwort kannst du frei wählen.
-        </p>
-      </section>
-    </main>
+      </header>
 
-    <!-- Dashboard -->
-    <main id="dashboardView" class="dashboard-main hidden">
-      <!-- Linke Seite: Willkommen + Projektformular -->
-      <section class="card">
-        <div class="card-header">
-          <div>
-            <div class="card-title">Willkommen im Projektbereich</div>
-            <div class="card-subtitle">Lege neue Projekte an oder öffne bestehende Produktionen.</div>
-          </div>
-          <button id="btnNewProjectTop" type="button" class="primary small">+ Neues Projekt</button>
-        </div>
-
-        <div class="dashboard-grid">
-          <div class="dashboard-tile">
-            <div class="dashboard-tile-title">Neues Projekt anlegen</div>
-            <div class="dashboard-tile-text">
-              Titel, Redaktion, Sendung und Format festlegen. Das Projekt erscheint anschließend in der Liste rechts.
-            </div>
-            <button type="button" class="small" id="btnNewProjectTile">Projekt erstellen</button>
-          </div>
-          <div class="dashboard-tile">
-            <div class="dashboard-tile-title">Projekt öffnen</div>
-            <div class="dashboard-tile-text">
-              Wähle ein bestehendes Projekt aus der Liste und öffne es im Storyboard-Editor.
-            </div>
-            <span class="hint">Nutze die Buttons in der Projektliste.</span>
-          </div>
-          <div class="dashboard-tile">
-            <div class="dashboard-tile-title">Mitarbeitende einladen</div>
-            <div class="dashboard-tile-text">
-              Geplant: Weitere Nutzerinnen und Nutzer mit Lese- oder Schreibrechten einladen.
-            </div>
-            <span class="hint">Coming soon</span>
-          </div>
-          <div class="dashboard-tile">
-            <div class="dashboard-tile-title">Einstellungen &amp; Logos</div>
-            <div class="dashboard-tile-text">
-              Senderlogos, Farbwelten und Standardformate für zukünftige Produktionen verwalten.
-            </div>
-            <span class="hint">Platzhalter &ndash; wird später ausgebaut.</span>
-          </div>
-        </div>
-
-        <!-- Projektformular -->
-        <div id="newProjectForm" class="card" style="margin-top:0.8rem; padding:0.65rem 0.7rem;">
+      <!-- Login / Registrierung -->
+      <main id="authView" class="project-main">
+        <section class="card auth-card">
           <div class="card-header">
             <div>
-              <div class="card-title">Neues Projekt</div>
-              <div class="card-subtitle">Metadaten für die Produktion</div>
+              <div class="card-title">Anmeldung</div>
+              <div class="card-subtitle">Mit E-Mail registrieren (Bestätigung ggf. per Mail)</div>
             </div>
           </div>
-          <div class="field">
-            <label for="npTitle">Projekttitel</label>
-            <input id="npTitle" type="text" placeholder="z.&nbsp;B. FWU Akkumulatoren" />
-          </div>
-          <div class="field-grid-2">
-            <div class="field">
-              <label for="npEditor">Redaktion</label>
-              <input id="npEditor" type="text" placeholder="z.&nbsp;B. FWU" />
-            </div>
-            <div class="field">
-              <label for="npCvd">CVD</label>
-              <input id="npCvd" type="text" placeholder="z.&nbsp;B. Maike" />
-            </div>
-            <div class="field">
-              <label for="npArea">Bereich</label>
-              <input id="npArea" type="text" placeholder="z.&nbsp;B. Physik" />
-            </div>
-            <div class="field">
-              <label for="npShow">Sendung</label>
-              <input id="npShow" type="text" placeholder="z.&nbsp;B. Schule" />
-            </div>
-            <div class="field">
-              <label for="npFormat">Format</label>
-              <input id="npFormat" type="text" placeholder="z.&nbsp;B. Erklärfilm" />
-            </div>
-            <div class="field">
-              <label for="npTarget">Zielgruppe</label>
-              <input id="npTarget" type="text" placeholder="z.&nbsp;B. Sek I" />
-            </div>
-          </div>
-          <div class="field" style="margin-top:0.4rem;">
-            <label for="npTeam">Team / Personen</label>
-            <input id="npTeam" type="text" placeholder="z.&nbsp;B. Redaktion, Autor, Regie ..." />
-          </div>
-          <div class="field" style="margin-top:0.4rem;">
-            <label for="npShort">Kurzbeschreibung</label>
-            <textarea id="npShort" placeholder="Kurze inhaltliche Beschreibung des Projekts"></textarea>
-          </div>
-          <div style="margin-top:0.6rem; display:flex; gap:0.4rem;">
-            <button id="btnCreateProject" type="button" class="primary small">Projekt speichern</button>
-            <button id="btnResetProjectForm" type="button" class="secondary small">Formular leeren</button>
-          </div>
-        </div>
-      </section>
 
-      <!-- Rechte Seite: aktuelles Projekt + Liste -->
-      <section class="card">
-        <div class="card-header">
-          <div>
-            <div class="card-title">Aktuelles Projekt</div>
-            <div class="card-subtitle" id="currentProjectSubtitle">Noch kein Projekt ausgewählt.</div>
+          <p class="hint" style="margin-top:0.2rem;">
+            Bitte trage hier deine <b>eigene</b> E-Mail-Adresse ein. Du bekommst ggf. eine Bestätigungs-Mail (je nach Supabase-Einstellung).
+          </p>
+
+          <div class="field">
+            <label for="loginEmail">E-Mail-Adresse</label>
+            <input id="loginEmail" type="email" placeholder="dein.name@domain.de" autocomplete="email" />
           </div>
-        </div>
-        <div class="field">
-          <label>Projektübersicht</label>
-          <div id="projectList" class="project-list"></div>
-        </div>
-      </section>
-    </main>
+
+          <div class="field" style="margin-top:0.45rem;">
+            <label for="loginPassword">Passwort</label>
+            <input id="loginPassword" type="password" placeholder="Passwort" autocomplete="current-password" />
+          </div>
+
+          <div class="field" style="margin-top:0.7rem; display:flex; gap:0.4rem;">
+            <button id="btnLogin" type="button" class="primary">Einloggen</button>
+            <button id="btnRegister" type="button" class="secondary">Registrieren</button>
+          </div>
+
+          <p class="hint" style="margin-top:0.7rem;">
+            Hinweis: Falls nach „Registrieren“ nichts passiert, liegt es fast immer an fehlendem Supabase-Mail-Setup oder einer blockierten Anfrage (Console prüfen).
+          </p>
+        </section>
+      </main>
+
+      <!-- Dashboard -->
+      <main id="dashboardView" class="dashboard-main hidden">
+        <section class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Willkommen im Projektbereich</div>
+              <div class="card-subtitle">Lege neue Projekte an oder öffne bestehende Produktionen.</div>
+            </div>
+            <button id="btnNewProjectTop" type="button" class="primary small">+ Neues Projekt</button>
+          </div>
+
+          <div class="dashboard-grid">
+            <div class="dashboard-tile">
+              <div class="dashboard-tile-title">Neues Projekt anlegen</div>
+              <div class="dashboard-tile-text">
+                Titel, Redaktion, Sendung und Format festlegen. Das Projekt erscheint anschließend in der Liste rechts.
+              </div>
+              <button type="button" class="small" id="btnNewProjectTile">Projekt erstellen</button>
+            </div>
+            <div class="dashboard-tile">
+              <div class="dashboard-tile-title">Projekt öffnen</div>
+              <div class="dashboard-tile-text">
+                Wähle ein bestehendes Projekt aus der Liste und öffne es im Storyboard-Editor.
+              </div>
+              <span class="hint">Nutze die Buttons in der Projektliste.</span>
+            </div>
+            <div class="dashboard-tile">
+              <div class="dashboard-tile-title">Mitarbeitende einladen</div>
+              <div class="dashboard-tile-text">
+                Geplant: Weitere Nutzerinnen und Nutzer mit Lese- oder Schreibrechten einladen.
+              </div>
+              <span class="hint">Coming soon</span>
+            </div>
+            <div class="dashboard-tile">
+              <div class="dashboard-tile-title">Einstellungen &amp; Logos</div>
+              <div class="dashboard-tile-text">
+                Senderlogos, Farbwelten und Standardformate für zukünftige Produktionen verwalten.
+              </div>
+              <span class="hint">Platzhalter – wird später ausgebaut.</span>
+            </div>
+          </div>
+
+          <div id="newProjectForm" class="card" style="margin-top:0.8rem; padding:0.65rem 0.7rem;">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Neues Projekt</div>
+                <div class="card-subtitle">Metadaten für die Produktion</div>
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="npTitle">Projekttitel</label>
+              <input id="npTitle" type="text" placeholder="z. B. FWU Akkumulatoren" />
+            </div>
+
+            <div class="field-grid-2">
+              <div class="field">
+                <label for="npEditor">Redaktion</label>
+                <input id="npEditor" type="text" placeholder="z. B. FWU" />
+              </div>
+              <div class="field">
+                <label for="npCvd">CVD</label>
+                <input id="npCvd" type="text" placeholder="z. B. Maike" />
+              </div>
+              <div class="field">
+                <label for="npArea">Bereich</label>
+                <input id="npArea" type="text" placeholder="z. B. Physik" />
+              </div>
+              <div class="field">
+                <label for="npShow">Sendung</label>
+                <input id="npShow" type="text" placeholder="z. B. Schule" />
+              </div>
+              <div class="field">
+                <label for="npFormat">Format</label>
+                <input id="npFormat" type="text" placeholder="z. B. Erklärfilm" />
+              </div>
+              <div class="field">
+                <label for="npTarget">Zielgruppe</label>
+                <input id="npTarget" type="text" placeholder="z. B. Sek I" />
+              </div>
+            </div>
+
+            <div class="field" style="margin-top:0.4rem;">
+              <label for="npTeam">Team / Personen</label>
+              <input id="npTeam" type="text" placeholder="z. B. Redaktion, Autor, Regie ..." />
+            </div>
+
+            <div class="field" style="margin-top:0.4rem;">
+              <label for="npShort">Kurzbeschreibung</label>
+              <textarea id="npShort" placeholder="Kurze inhaltliche Beschreibung des Projekts"></textarea>
+            </div>
+
+            <div style="margin-top:0.6rem; display:flex; gap:0.4rem;">
+              <button id="btnCreateProject" type="button" class="primary small">Projekt speichern</button>
+              <button id="btnResetProjectForm" type="button" class="secondary small">Formular leeren</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Aktuelles Projekt</div>
+              <div class="card-subtitle" id="currentProjectSubtitle">Noch kein Projekt ausgewählt.</div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Projektübersicht</label>
+            <div id="projectList" class="project-list"></div>
+          </div>
+        </section>
+      </main>
+    </div>
   </div>
-</div>
 </body>
 </html>
