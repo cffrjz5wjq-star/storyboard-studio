@@ -1,30 +1,39 @@
-import express from "express";
-import path from "path";
-import { fileURLToPath } from "url";
+"use strict";
+
+const express = require("express");
+const path = require("path");
 
 const app = express();
-const PORT = process.env.PORT || 10000;
 
-// Fix für ES Modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Render Env Vars
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
-// Static files
+// Minimal check (damit du im Log sofort siehst, wenn was fehlt)
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.error("Missing env vars: SUPABASE_URL / SUPABASE_ANON_KEY");
+}
+
+app.use(express.json());
+
+// Static files aus /public
 app.use(express.static(path.join(__dirname, "public")));
 
-// Config Endpoint für Frontend
+// Wichtig: Config fürs Frontend (NUR URL + ANON KEY, niemals SERVICE_ROLE_KEY)
 app.get("/config", (req, res) => {
   res.json({
-    url: process.env.SUPABASE_URL,
-    anonKey: process.env.SUPABASE_ANON_KEY,
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY,
   });
 });
 
-// Fallback → index.html
+// Health Check
+app.get("/health", (req, res) => res.status(200).send("ok"));
+
+// Fallback: alles andere -> index.html (für späteres Routing)
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-app.listen(PORT, () => {
-  console.log("Server läuft auf Port", PORT);
-});
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log(`Storyboard Studio läuft auf Port ${PORT}`));
