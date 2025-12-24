@@ -1,151 +1,125 @@
 "use strict";
 
-let sb = null;
+let sbClient = null;
 
 // Helper
 const $ = (id) => document.getElementById(id);
-const show = (id, on) => $(id)?.classList.toggle("hidden", !on);
-
-function errMsg(e) {
-  if (!e) return "";
-  if (typeof e === "string") return e;
-  return e.message || JSON.stringify(e);
-}
+const show = (id, on) => $(id).classList.toggle("hidden", !on);
 
 async function initSupabase() {
-  // holt SUPABASE_URL / SUPABASE_ANON_KEY vom Server
   const res = await fetch("/config", { cache: "no-store" });
-  if (!res.ok) throw new Error(`/config failed: ${res.status}`);
+  if (!res.ok) throw new Error("Konnte /config nicht laden: " + res.status);
 
   const cfg = await res.json();
-  if (!cfg?.SUPABASE_URL || !cfg?.SUPABASE_ANON_KEY) {
-    throw new Error("Config missing SUPABASE_URL / SUPABASE_ANON_KEY");
+  if (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY) {
+    throw new Error("SUPABASE_URL oder SUPABASE_ANON_KEY fehlt in /config");
   }
 
-  // WICHTIG: Supabase Client NUR EINMAL erstellen
-  if (!window.supabase?.createClient) {
-    throw new Error("Supabase SDK not loaded (supabase-js@2 fehlt im index.html)");
-  }
-
-  sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+  // Wichtig: NICHT "supabase" als Variable benutzen
+  sbClient = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
 }
 
-// UI
 async function refreshUI() {
-  const { data, error } = await sb.auth.getSession();
-  if (error) console.error("getSession error:", error);
+  if (!sbClient) return;
 
-  const session = data?.session;
+  const { data, error } = await sbClient.auth.getSession();
+  if (error) console.warn("getSession error:", error);
+
+  const session = data?.session ?? null;
 
   if (!session) {
     show("authView", true);
     show("dashboardView", false);
     show("btnLogout", false);
-    if ($("userInfo")) $("userInfo").textContent = "Nicht eingeloggt";
+    $("userInfo").textContent = "Nicht eingeloggt";
     return;
   }
 
   show("authView", false);
   show("dashboardView", true);
   show("btnLogout", true);
-  if ($("userInfo")) $("userInfo").textContent = session.user.email || "Eingeloggt";
+  $("userInfo").textContent = session.user.email || "Eingeloggt";
 
-  await loadProjects();
+  loadProjects();
 }
 
-// Auth
+// Auth Actions
 async function login() {
-  const email = ($("loginEmail")?.value || "").trim();
-  const password = $("loginPassword")?.value || "";
+  const email = $("loginEmail").value.trim();
+  const password = $("loginPassword").value;
 
-  if (!email || !password) return alert("E-Mail und Passwort fehlen.");
+  const { data, error } = await sbClient.auth.signInWithPassword({ email, password });
+  if (error) return alert(error.message);
 
-  const { error } = await sb.auth.signInWithPassword({ email, password });
-  if (error) return alert("Login: " + errMsg(error));
+  // Wenn Email-Confirmation aktiv ist, kommt oft "Email not confirmed"
+  if (!data?.session) {
+    alert("Login ok, aber noch keine Session. Falls E-Mail-Bestätigung aktiv ist: Mail bestätigen.");
+  }
+
+  refreshUI();
 }
 
 async function register() {
-  const email = ($("loginEmail")?.value || "").trim();
-  const password = $("loginPassword")?.value || "";
+  const email = $("loginEmail").value.trim();
+  const password = $("loginPassword").value;
 
-  if (!email || !password) return alert("E-Mail und Passwort fehlen.");
+  const redirectTo = window.location.origin; // z.B. https://storyboard-studio.onrender.com
 
-  // Redirect-Link in der Bestätigungs-Mail (muss in Supabase als Redirect URL erlaubt sein!)
-  const emailRedirectTo = `${window.location.origin}/`;
-
-  const { data, error } = await sb.auth.signUp({
+  const { data, error } = await sbClient.auth.signUp({
     email,
     password,
-    options: { emailRedirectTo }
+    options: { emailRedirectTo: redirectTo }
   });
 
-  if (error) return alert("Registrierung: " + errMsg(error));
+  if (error) return alert(error.message);
 
-  // Bei aktivierter E-Mail-Confirmation ist session i.d.R. null bis bestätigt.
-  const user = data?.user;
-  if (user) {
-    alert("Registriert. Bitte E-Mail bestätigen, dann einloggen.");
-  } else {
-    alert("Registriert. Bitte E-Mail bestätigen, dann einloggen.");
-  }
+  // Bei Confirm Email: User wird angelegt, aber keine Session -> Mail muss bestätigt werden
+  alert("Registriert. Bitte E-Mail öffnen und bestätigen (ggf. Spam prüfen).");
+  console.log("signUp data:", data);
 }
 
 async function logout() {
-  const { error } = await sb.auth.signOut();
-  if (error) alert("Logout: " + errMsg(error));
+  await sbClient.auth.signOut();
+  refreshUI();
 }
 
 // Projects
 async function createProject() {
-  const title = ($("npTitle")?.value || "").trim();
-  if (!title) return alert("Titel fehlt.");
-
-  const { data: sessData } = await sb.auth.getSession();
-  const userId = sessData?.session?.user?.id;
+  const title = $("npTitle").value.trim();
+  if (!title) return alert("Titel fehlt");
 
   const payload = {
-    title,
-    data: {
-      editor: $("npEditor")?.value || "",
-      cvd: $("npCvd")?.value || "",
-      area: $("npArea")?.value || "",
-      show: $("npShow")?.value || "",
-      format: $("npFormat")?.value || "",
-      target: $("npTarget")?.value || "",
-      team: $("npTeam")?.value || "",
-      short: $("npShort")?.value || ""
-    }
+    editor: $("npEditor").value,
+    cvd: $("npCvd").value,
+    area: $("npArea").value,
+    show: $("npShow").value,
+    format: $("npFormat").value,
+    target: $("npTarget").value,
+    team: $("npTeam").value,
+    short: $("npShort").value
   };
 
-  // Wenn du RLS aktiv hast, brauchst du typischerweise user_id in der Tabelle:
-  // Falls deine Tabelle kein user_id hat, diese Zeile rausnehmen.
-  if (userId) payload.user_id = userId;
+  const { error } = await sbClient.from("projects").insert([{ title, data: payload }]);
+  if (error) return alert(error.message);
 
-  const { error } = await sb.from("projects").insert([payload]);
-  if (error) return alert("Projekt speichern: " + errMsg(error));
-
-  await loadProjects();
+  loadProjects();
 }
 
 async function loadProjects() {
   const list = $("projectList");
-  if (!list) return;
   list.innerHTML = "";
 
-  const { data: sessData } = await sb.auth.getSession();
-  const userId = sessData?.session?.user?.id;
+  const { data, error } = await sbClient
+    .from("projects")
+    .select("id,title,created_at")
+    .order("created_at", { ascending: false });
 
-  // Wenn du RLS + user_id nutzt, filtern:
-  let q = sb.from("projects").select("id,title").order("created_at", { ascending: false });
-  if (userId) q = q.eq("user_id", userId);
-
-  const { data, error } = await q;
   if (error) {
-    list.textContent = "Load: " + errMsg(error);
+    list.textContent = error.message;
     return;
   }
 
-  (data || []).forEach((p) => {
+  data.forEach((p) => {
     const div = document.createElement("div");
     div.className = "project-item";
     div.textContent = p.title;
@@ -157,21 +131,19 @@ async function loadProjects() {
 document.addEventListener("DOMContentLoaded", async () => {
   try {
     await initSupabase();
-
-    // Buttons
-    if ($("btnLogin")) $("btnLogin").onclick = login;
-    if ($("btnRegister")) $("btnRegister").onclick = register;
-    if ($("btnLogout")) $("btnLogout").onclick = logout;
-    if ($("btnCreateProject")) $("btnCreateProject").onclick = createProject;
-
-    // Auth listener
-    sb.auth.onAuthStateChange(() => {
-      refreshUI();
-    });
-
-    await refreshUI();
   } catch (e) {
     console.error(e);
-    alert("Init Fehler: " + errMsg(e));
+    alert("Supabase Init Fehler: " + e.message);
+    return;
   }
+
+  $("btnLogin").onclick = login;
+  $("btnRegister").onclick = register;
+  $("btnLogout").onclick = logout;
+
+  const btnCreate = $("btnCreateProject");
+  if (btnCreate) btnCreate.onclick = createProject;
+
+  sbClient.auth.onAuthStateChange(() => refreshUI());
+  refreshUI();
 });
