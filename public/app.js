@@ -1,215 +1,116 @@
-// public/app.js
-(() => {
-  const S = {
-    // Buttons
-    saveBtn: "#btnCreateProject",
-    clearBtn: "#btnResetProjectForm",
-    newTop: "#btnNewProjectTop",
-    newTile: "#btnNewProjectTile",
+"use strict";
 
-    // Form fields (deine IDs)
-    name: "#npTitle",
-    redaktion: "#npEditor",
-    cvd: "#npCvd",
-    bereich: "#npArea",
-    sendung: "#npShow",
-    format: "#npFormat",
-    zielgruppe: "#npTarget",
-    team: "#npTeam",
-    kurzbeschreibung: "#npShort",
+let supabase;
 
-    // Right panel list
-    listContainer: "#projectList",
+// Helper
+const $ = (id) => document.getElementById(id);
+const show = (id, on) => $(id).classList.toggle("hidden", !on);
 
-    // Anzeige aktuelles Projekt
-    currentSubtitle: "#currentProjectSubtitle",
+// Init
+async function initSupabase() {
+  const res = await fetch("/config");
+  const cfg = await res.json();
+  supabase = window.supabase.createClient(
+    cfg.SUPABASE_URL,
+    cfg.SUPABASE_ANON_KEY
+  );
+}
+
+// Auth UI
+async function refreshUI() {
+  const { data } = await supabase.auth.getSession();
+  const session = data.session;
+
+  if (!session) {
+    show("authView", true);
+    show("dashboardView", false);
+    show("btnLogout", false);
+    $("userInfo").textContent = "Nicht eingeloggt";
+    return;
+  }
+
+  show("authView", false);
+  show("dashboardView", true);
+  show("btnLogout", true);
+  $("userInfo").textContent = session.user.email;
+
+  loadProjects();
+}
+
+// Auth Actions
+async function login() {
+  const email = $("loginEmail").value;
+  const password = $("loginPassword").value;
+
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) alert(error.message);
+}
+
+async function register() {
+  const email = $("loginEmail").value;
+  const password = $("loginPassword").value;
+
+  const { error } = await supabase.auth.signUp({ email, password });
+  if (error) alert(error.message);
+  else alert("Registriert. Falls aktiviert: Mail bestätigen.");
+}
+
+async function logout() {
+  await supabase.auth.signOut();
+}
+
+// Projects
+async function createProject() {
+  const title = $("npTitle").value.trim();
+  if (!title) return alert("Titel fehlt");
+
+  const data = {
+    editor: $("npEditor").value,
+    cvd: $("npCvd").value,
+    area: $("npArea").value,
+    show: $("npShow").value,
+    format: $("npFormat").value,
+    target: $("npTarget").value,
+    team: $("npTeam").value,
+    short: $("npShort").value
   };
 
-  const el = (sel) => document.querySelector(sel);
+  const { error } = await supabase.from("projects").insert([{ title, data }]);
+  if (error) alert(error.message);
+  else loadProjects();
+}
 
-  const state = {
-    selectedId: null,
-    projects: [],
-  };
+async function loadProjects() {
+  const list = $("projectList");
+  list.innerHTML = "";
 
-  function getFormPayload() {
-    const name = (el(S.name)?.value ?? "").trim();
-    return {
-      name,
-      data: {
-        redaktion: el(S.redaktion)?.value ?? "",
-        cvd: el(S.cvd)?.value ?? "",
-        bereich: el(S.bereich)?.value ?? "",
-        sendung: el(S.sendung)?.value ?? "",
-        format: el(S.format)?.value ?? "",
-        zielgruppe: el(S.zielgruppe)?.value ?? "",
-        team: el(S.team)?.value ?? "",
-        kurzbeschreibung: el(S.kurzbeschreibung)?.value ?? "",
-      },
-    };
+  const { data, error } = await supabase
+    .from("projects")
+    .select("id,title")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    list.textContent = error.message;
+    return;
   }
 
-  function setFormFromProject(project) {
-    state.selectedId = project?.id ?? null;
-
-    if (el(S.currentSubtitle)) {
-      el(S.currentSubtitle).textContent = project?.name
-        ? `Ausgewählt: ${project.name}`
-        : "Noch kein Projekt ausgewählt.";
-    }
-
-    if (el(S.name)) el(S.name).value = project?.name ?? "";
-
-    const d = project?.data ?? {};
-    if (el(S.redaktion)) el(S.redaktion).value = d.redaktion ?? "";
-    if (el(S.cvd)) el(S.cvd).value = d.cvd ?? "";
-    if (el(S.bereich)) el(S.bereich).value = d.bereich ?? "";
-    if (el(S.sendung)) el(S.sendung).value = d.sendung ?? "";
-    if (el(S.format)) el(S.format).value = d.format ?? "";
-    if (el(S.zielgruppe)) el(S.zielgruppe).value = d.zielgruppe ?? "";
-    if (el(S.team)) el(S.team).value = d.team ?? "";
-    if (el(S.kurzbeschreibung)) el(S.kurzbeschreibung).value = d.kurzbeschreibung ?? "";
-  }
-
-  function clearForm() {
-    state.selectedId = null;
-
-    if (el(S.currentSubtitle)) {
-      el(S.currentSubtitle).textContent = "Noch kein Projekt ausgewählt.";
-    }
-
-    [
-      S.name, S.redaktion, S.cvd, S.bereich, S.sendung,
-      S.format, S.zielgruppe, S.team, S.kurzbeschreibung
-    ]
-      .map(el)
-      .filter(Boolean)
-      .forEach((x) => (x.value = ""));
-  }
-
-  async function api(path, opts = {}) {
-    const res = await fetch(path, {
-      headers: { "Content-Type": "application/json" },
-      ...opts,
-    });
-    const txt = await res.text();
-    let json = null;
-    try { json = txt ? JSON.parse(txt) : null; } catch {}
-    if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
-    return json;
-  }
-
-  function renderProjectList() {
-    const container = el(S.listContainer);
-    if (!container) return;
-
-    container.innerHTML = "";
-
-    if (!state.projects.length) {
-      const div = document.createElement("div");
-      div.style.opacity = "0.7";
-      div.textContent = "Noch kein Projekt gespeichert.";
-      container.appendChild(div);
-      return;
-    }
-
-    state.projects.forEach((p) => {
-      const row = document.createElement("div");
-      row.className = "project-item";
-
-      const main = document.createElement("div");
-      main.className = "project-item-main";
-
-      const title = document.createElement("div");
-      title.className = "project-item-title";
-      title.textContent = p.name;
-      title.style.cursor = "pointer";
-      title.onclick = () => openProject(p.id);
-
-      const meta = document.createElement("div");
-      meta.className = "project-item-meta";
-      meta.textContent = (p.data?.redaktion || p.data?.sendung || "").toString();
-
-      main.appendChild(title);
-      main.appendChild(meta);
-
-      const actions = document.createElement("div");
-      actions.className = "project-item-actions";
-
-      const btn = document.createElement("button");
-      btn.className = "small";
-      btn.textContent = "Öffnen";
-      btn.onclick = () => openProject(p.id);
-
-      actions.appendChild(btn);
-
-      row.appendChild(main);
-      row.appendChild(actions);
-
-      container.appendChild(row);
-    });
-  }
-
-  async function loadProjects() {
-    state.projects = await api("/api/projects");
-    renderProjectList();
-  }
-
-  async function openProject(id) {
-    const project = await api(`/api/projects/${id}`);
-    setFormFromProject(project);
-  }
-
-  async function saveProject() {
-    const payload = getFormPayload();
-    if (!payload.name) {
-      alert("Bitte Projekttitel ausfüllen.");
-      return;
-    }
-
-    if (state.selectedId) {
-      const updated = await api(`/api/projects/${state.selectedId}`, {
-        method: "PUT",
-        body: JSON.stringify(payload),
-      });
-      setFormFromProject(updated);
-    } else {
-      const created = await api("/api/projects", {
-        method: "POST",
-        body: JSON.stringify(payload),
-      });
-      setFormFromProject(created);
-    }
-
-    await loadProjects();
-  }
-
-  function wire() {
-    el(S.saveBtn)?.addEventListener("click", (e) => {
-      e.preventDefault();
-      saveProject().catch((err) => alert(`Speichern fehlgeschlagen: ${err.message}`));
-    });
-
-    el(S.clearBtn)?.addEventListener("click", (e) => {
-      e.preventDefault();
-      clearForm();
-    });
-
-    el(S.newTop)?.addEventListener("click", (e) => {
-      e.preventDefault();
-      clearForm();
-      el(S.name)?.focus?.();
-    });
-
-    el(S.newTile)?.addEventListener("click", (e) => {
-      e.preventDefault();
-      clearForm();
-      el(S.name)?.focus?.();
-    });
-  }
-
-  document.addEventListener("DOMContentLoaded", async () => {
-    wire();
-    await loadProjects();
+  data.forEach(p => {
+    const div = document.createElement("div");
+    div.className = "project-item";
+    div.textContent = p.title;
+    list.appendChild(div);
   });
-})();
+}
+
+// Start
+document.addEventListener("DOMContentLoaded", async () => {
+  await initSupabase();
+
+  $("btnLogin").onclick = login;
+  $("btnRegister").onclick = register;
+  $("btnLogout").onclick = logout;
+  $("btnCreateProject").onclick = createProject;
+
+  supabase.auth.onAuthStateChange(refreshUI);
+  refreshUI();
+});
