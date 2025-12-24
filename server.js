@@ -1,47 +1,116 @@
+// server.js
 import express from "express";
-import cors from "cors";
+import path from "path";
+import { fileURLToPath } from "url";
 import { createClient } from "@supabase/supabase-js";
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "5mb" }));
 
-// ENV
-const supabaseUrl = process.env.SUPABASE_URL;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-if (!supabaseUrl || !serviceRoleKey) {
-  throw new Error("Supabase ENV vars fehlen");
+// --- Supabase (Server-side, Service Role) ---
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars.");
 }
 
-const supabase = createClient(supabaseUrl, serviceRoleKey);
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-// GET alle Projekte
-app.get("/api/projects", async (req, res) => {
+// --- Static frontend ---
+app.use(express.static(path.join(__dirname, "public")));
+
+// Healthcheck
+app.get("/api/health", async (_req, res) => {
+  res.json({ ok: true });
+});
+
+/**
+ * DB table expected: public.projects
+ * Columns (minimum):
+ *  - id uuid primary key default gen_random_uuid()
+ *  - name text not null
+ *  - data jsonb not null default '{}'::jsonb
+ *  - created_at timestamptz not null default now()
+ *  - updated_at timestamptz not null default now()
+ */
+
+// List projects
+app.get("/api/projects", async (_req, res) => {
   const { data, error } = await supabase
     .from("projects")
-    .select("*")
-    .order("created_at", { ascending: false });
+    .select("id,name,data,created_at,updated_at")
+    .order("updated_at", { ascending: false });
 
-  if (error) return res.status(500).json(error);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data ?? []);
+});
+
+// Get single project
+app.get("/api/projects/:id", async (req, res) => {
+  const { id } = req.params;
+
+  const { data, error } = await supabase
+    .from("projects")
+    .select("id,name,data,created_at,updated_at")
+    .eq("id", id)
+    .single();
+
+  if (error) return res.status(404).json({ error: error.message });
   res.json(data);
 });
 
-// POST neues Projekt
+// Create project
 app.post("/api/projects", async (req, res) => {
-  const { name, data } = req.body;
+  const payload = req.body ?? {};
+  const name = String(payload.name ?? "").trim();
+  const data = payload.data ?? {};
 
-  const { data: result, error } = await supabase
+  if (!name) return res.status(400).json({ error: "Missing project name" });
+
+  const now = new Date().toISOString();
+
+  const { data: inserted, error } = await supabase
     .from("projects")
-    .insert([{ name, data }])
-    .select()
+    .insert([{ name, data, created_at: now, updated_at: now }])
+    .select("id,name,data,created_at,updated_at")
     .single();
 
-  if (error) return res.status(500).json(error);
-  res.json(result);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(inserted);
 });
 
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-  console.log("Server läuft auf Port", PORT);
+// Update project
+app.put("/api/projects/:id", async (req, res) => {
+  const { id } = req.params;
+  const payload = req.body ?? {};
+  const name = String(payload.name ?? "").trim();
+  const data = payload.data ?? {};
+
+  if (!name) return res.status(400).json({ error: "Missing project name" });
+
+  const now = new Date().toISOString();
+
+  const { data: updated, error } = await supabase
+    .from("projects")
+    .update({ name, data, updated_at: now })
+    .eq("id", id)
+    .select("id,name,data,created_at,updated_at")
+    .single();
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(updated);
+});
+
+// SPA fallback (optional)
+app.get("*", (_req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+const port = process.env.PORT || 10000;
+app.listen(port, () => {
+  console.log(`Storyboard Studio läuft auf Port ${port}`);
 });
