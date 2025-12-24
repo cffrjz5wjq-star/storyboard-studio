@@ -1,29 +1,30 @@
-"use strict";
-
-const path = require("path");
-const express = require("express");
+import express from "express";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const app = express();
-app.use(express.json());
+const PORT = process.env.PORT || 10000;
 
-// Frontend ausliefern
+// Fix für ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Static files
 app.use(express.static(path.join(__dirname, "public")));
 
-// Config fürs Frontend (keine Secrets!)
+// Config Endpoint für Frontend
 app.get("/config", (req, res) => {
-  const { SUPABASE_URL, SUPABASE_ANON_KEY } = process.env;
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    return res.status(500).json({ error: "Supabase config missing" });
-  }
-  res.json({ SUPABASE_URL, SUPABASE_ANON_KEY });
+  res.json({
+    url: process.env.SUPABASE_URL,
+    anonKey: process.env.SUPABASE_ANON_KEY,
+  });
 });
 
-// Fallback
-app.get("*", (_, res) => {
+// Fallback → index.html
+app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-const port = process.env.PORT || 10000;
-app.listen(port, () => {
-  console.log("Storyboard Studio läuft auf Port", port);
+app.listen(PORT, () => {
+  console.log("Server läuft auf Port", PORT);
 });
