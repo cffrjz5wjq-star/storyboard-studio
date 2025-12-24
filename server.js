@@ -4,71 +4,117 @@
 const express = require("express");
 const path = require("path");
 const cookieParser = require("cookie-parser");
+const { createClient } = require("@supabase/supabase-js");
 
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Middleware
-app.use(express.json());
-app.use(cookieParser());
-app.use(express.urlencoded({ extended: true }));
+// --------------------------------------------------
+// Supabase Client (global, serverseitig)
+// --------------------------------------------------
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY
+);
 
-// Statisches Build aus /public ausliefern
+// --------------------------------------------------
+// Middleware
+// --------------------------------------------------
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+// --------------------------------------------------
+// Statisches Frontend ausliefern
+// --------------------------------------------------
 const publicDir = path.join(__dirname, "public");
 app.use(express.static(publicDir));
 
-
-// -------------------------------------------------------------
+// --------------------------------------------------
 // HEALTH CHECK
-// -------------------------------------------------------------
+// --------------------------------------------------
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "ok", service: "storyboard-studio" });
 });
 
-
-// -------------------------------------------------------------
-// SUPABASE TEST-ROUTE → WICHTIG: MUSS VOR DEM FALLBACK STEHEN!
-// -------------------------------------------------------------
-app.get("/test-supabase", async (req, res) => {
+// --------------------------------------------------
+// PROJECT SAVE (Online)
+// --------------------------------------------------
+app.post("/api/projects/save", async (req, res) => {
   try {
-    const { createClient } = require("@supabase/supabase-js");
+    const { projectId, ownerId, name, data } = req.body;
 
-    const supabase = createClient(
-      process.env.SUPABASE_URL,               // deine URL
-      process.env.SUPABASE_SERVICE_ROLE_KEY  // dein geheimer Key
-    );
+    if (!ownerId || !name) {
+      return res.status(400).json({ error: "ownerId and name required" });
+    }
 
-    const { data, error } = await supabase
-      .from("pg_tables")
-      .select("*")
-      .limit(1);
-
-    res.json({
-      connected: !error,
-      error,
+    const payload = {
+      owner_id: ownerId,
+      name,
       data
-    });
+    };
 
+    const query = projectId
+      ? supabase
+          .from("projects")
+          .update(payload)
+          .eq("id", projectId)
+          .select("id")
+          .single()
+      : supabase
+          .from("projects")
+          .insert(payload)
+          .select("id")
+          .single();
+
+    const { data: row, error } = await query;
+
+    if (error) {
+      console.error(error);
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.json({ projectId: row.id });
   } catch (err) {
-    res.json({
-      connected: false,
-      error: err.message
-    });
+    console.error(err);
+    res.status(500).json({ error: "server error" });
   }
 });
 
+// --------------------------------------------------
+// PROJECT LOAD (Online)
+// --------------------------------------------------
+app.get("/api/projects/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
 
-// -------------------------------------------------------------
-// FALLBACK – Single Page App (React/Vanilla)
-// -------------------------------------------------------------
+    const { data, error } = await supabase
+      .from("projects")
+      .select("id, owner_id, name, data, updated_at")
+      .eq("id", id)
+      .single();
+
+    if (error) {
+      return res.status(404).json({ error: error.message });
+    }
+
+    res.json(data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "server error" });
+  }
+});
+
+// --------------------------------------------------
+// FALLBACK – Single Page App
+// --------------------------------------------------
 app.get("*", (req, res) => {
   res.sendFile(path.join(publicDir, "index.html"));
 });
 
-
-// -------------------------------------------------------------
-// SERVER STARTEN
-// -------------------------------------------------------------
+// --------------------------------------------------
+// SERVER START
+// --------------------------------------------------
 app.listen(PORT, () => {
   console.log(`Storyboard Studio läuft auf Port ${PORT}`);
 });
