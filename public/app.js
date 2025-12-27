@@ -1,13 +1,11 @@
 "use strict";
 
-let sb; // Supabase client (absichtlich NICHT "supabase" nennen)
+let sb; // Supabase client
 
-// Helper
 const $ = (id) => document.getElementById(id);
 const show = (id, on) => $(id).classList.toggle("hidden", !on);
 
 async function initSupabase() {
-  // Supabase Library muss da sein
   if (!window.supabase) throw new Error("Supabase JS not loaded (window.supabase missing).");
 
   const res = await fetch("/config", { cache: "no-store" });
@@ -16,31 +14,41 @@ async function initSupabase() {
     throw new Error(`/config failed: ${res.status} ${t}`);
   }
   const cfg = await res.json();
-
   sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
 }
 
-async function refreshUI() {
-  const { data, error } = await sb.auth.getSession();
-  if (error) console.error(error);
+function renderLoggedOut() {
+  show("authView", true);
+  show("dashboardView", false);
+  show("btnLogout", false);
+  $("userInfo").textContent = "Nicht eingeloggt";
+}
 
-  const session = data?.session;
-
-  if (!session) {
-    show("authView", true);
-    show("dashboardView", false);
-    show("btnLogout", false);
-    $("userInfo").textContent = "Nicht eingeloggt";
-    return;
-  }
-
+async function renderLoggedIn(session) {
   show("authView", false);
   show("dashboardView", true);
   show("btnLogout", true);
   $("userInfo").textContent = session.user.email;
-
-  // Projektliste nur laden, wenn Dashboard sichtbar ist
   await loadProjects();
+}
+
+async function getSessionWithRetry(tries = 10, delayMs = 200) {
+  for (let i = 0; i < tries; i++) {
+    const { data, error } = await sb.auth.getSession();
+    if (error) console.error("getSession error:", error);
+    if (data?.session) return data.session;
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+  return null;
+}
+
+async function refreshUI() {
+  const session = await getSessionWithRetry(1, 0);
+  if (!session) {
+    renderLoggedOut();
+    return;
+  }
+  await renderLoggedIn(session);
 }
 
 // Auth actions
@@ -55,12 +63,24 @@ async function login() {
     return;
   }
 
-  // WICHTIG: UI aktiv aktualisieren (nicht nur auf onAuthStateChange hoffen)
-  if (!data?.session) {
-    // selten, aber möglich: Session wird nicht sofort gesetzt
-    await new Promise((r) => setTimeout(r, 150));
+  // 1) Wenn Supabase sofort eine Session liefert: direkt verwenden
+  if (data?.session) {
+    await renderLoggedIn(data.session);
+    return;
   }
-  await refreshUI();
+
+  // 2) Sonst: Session ein paar Mal nachziehen
+  const session = await getSessionWithRetry(12, 250);
+  if (session) {
+    await renderLoggedIn(session);
+    return;
+  }
+
+  // 3) Wenn nach erfolgreichem Login trotzdem keine Session da ist: Storage-Problem
+  alert(
+    "Login war erfolgreich, aber es konnte keine Session gespeichert/geladen werden.\n" +
+      "Bitte prüfe: Private-Browsing aus, Content-Blocker aus, Website-Daten für storyboard-studio.onrender.com löschen."
+  );
 }
 
 async function register() {
@@ -70,10 +90,7 @@ async function register() {
   const { error } = await sb.auth.signUp({
     email,
     password,
-    options: {
-      // wichtig für E-Mail-Bestätigung (Link kommt zurück zu deiner Render-URL)
-      emailRedirectTo: window.location.origin,
-    },
+    options: { emailRedirectTo: window.location.origin },
   });
 
   if (error) alert(error.message);
@@ -82,7 +99,7 @@ async function register() {
 
 async function logout() {
   await sb.auth.signOut();
-  await refreshUI();
+  renderLoggedOut();
 }
 
 // Projects
@@ -90,18 +107,21 @@ async function createProject() {
   const title = $("npTitle").value.trim();
   if (!title) return alert("Titel fehlt");
 
-  const data = {
-    editor: $("npEditor").value,
-    cvd: $("npCvd").value,
-    area: $("npArea").value,
-    show: $("npShow").value,
-    format: $("npFormat").value,
-    target: $("npTarget").value,
-    team: $("npTeam").value,
-    short: $("npShort").value,
+  const payload = {
+    title,
+    data: {
+      editor: $("npEditor").value,
+      cvd: $("npCvd").value,
+      area: $("npArea").value,
+      show: $("npShow").value,
+      format: $("npFormat").value,
+      target: $("npTarget").value,
+      team: $("npTeam").value,
+      short: $("npShort").value,
+    },
   };
 
-  const { error } = await sb.from("projects").insert([{ title, data }]);
+  const { error } = await sb.from("projects").insert([payload]);
   if (error) alert(error.message);
   else await loadProjects();
 }
@@ -120,7 +140,7 @@ async function loadProjects() {
     return;
   }
 
-  data.forEach((p) => {
+  (data || []).forEach((p) => {
     const div = document.createElement("div");
     div.className = "project-item";
     div.textContent = p.title;
