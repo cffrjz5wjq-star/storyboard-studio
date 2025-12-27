@@ -6,10 +6,23 @@ const path = require("path");
 const app = express();
 app.use(express.json());
 
-// Public ausliefern
-app.use(express.static(path.join(__dirname, "public")));
+// Public staticfiles + Cache-Control für html/js/css
+app.use(
+  express.static(path.join(__dirname, "public"), {
+    etag: false,
+    setHeaders: (res, filePath) => {
+      if (
+        filePath.endsWith(".html") ||
+        filePath.endsWith(".js") ||
+        filePath.endsWith(".css")
+      ) {
+        res.setHeader("Cache-Control", "no-store");
+      }
+    },
+  })
+);
 
-// Frontend-Konfig (nur ANON + URL)
+// Frontend-config (nur anon key!)
 app.get("/config", (req, res) => {
   const { SUPABASE_URL, SUPABASE_ANON_KEY } = process.env;
 
@@ -22,8 +35,8 @@ app.get("/config", (req, res) => {
   res.json({ SUPABASE_URL, SUPABASE_ANON_KEY });
 });
 
-// optional health
+// Health
 app.get("/health", (req, res) => res.json({ ok: true }));
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("Server listening on", PORT));
+const port = process.env.PORT || 10000;
+app.listen(port, () => console.log("Server listening on", port));
