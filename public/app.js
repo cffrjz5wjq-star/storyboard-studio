@@ -1,66 +1,61 @@
 "use strict";
 
-let sb;
+let sb; // Supabase client
 
-// Helper
 const $ = (id) => document.getElementById(id);
-const show = (id, on) => {
+
+function show(id, on) {
   const el = $(id);
   if (!el) {
-    alert("UI-Element fehlt: #" + id);
+    console.warn("show(): Element fehlt:", id);
     return;
   }
   el.classList.toggle("hidden", !on);
-};
+}
 
-// -------------------- Supabase Init --------------------
 async function initSupabase() {
-  if (!window.supabase) throw new Error("Supabase JS nicht geladen");
+  if (!window.supabase) throw new Error("Supabase JS not loaded (window.supabase missing).");
 
   const res = await fetch("/config", { cache: "no-store" });
   if (!res.ok) {
     const t = await res.text();
-    throw new Error("/config Fehler: " + res.status + " " + t);
+    throw new Error(`/config failed: ${res.status} ${t}`);
   }
-
   const cfg = await res.json();
+
   sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
 }
 
-// -------------------- UI States --------------------
 function renderLoggedOut() {
   show("authView", true);
   show("dashboardView", false);
   show("btnLogout", false);
-  $("userInfo").textContent = "Nicht eingeloggt";
+  const ui = $("userInfo");
+  if (ui) ui.textContent = "Nicht eingeloggt";
 }
 
 async function renderLoggedIn(session) {
   show("authView", false);
   show("dashboardView", true);
   show("btnLogout", true);
-  $("userInfo").textContent = session.user.email;
+  const ui = $("userInfo");
+  if (ui) ui.textContent = session.user?.email || "Eingeloggt";
 
-  try {
-    await loadProjects();
-  } catch (e) {
-    console.error(e);
-    alert("Login OK, aber loadProjects() abgestürzt:\n" + e.message);
-  }
+  await loadProjects();
 }
 
-// -------------------- Session Handling --------------------
-async function getSessionWithRetry(tries = 10, delay = 250) {
+async function getSessionWithRetry(tries = 15, delayMs = 250) {
   for (let i = 0; i < tries; i++) {
-    const { data } = await sb.auth.getSession();
+    const { data, error } = await sb.auth.getSession();
+    if (error) console.error("getSession error:", error);
     if (data?.session) return data.session;
-    await new Promise((r) => setTimeout(r, delay));
+    await new Promise((r) => setTimeout(r, delayMs));
   }
   return null;
 }
 
 async function refreshUI() {
-  const session = await getSessionWithRetry(1, 0);
+  const session = await getSessionWithRetry(15, 250);
   if (!session) {
     renderLoggedOut();
     return;
@@ -68,45 +63,31 @@ async function refreshUI() {
   await renderLoggedIn(session);
 }
 
-// -------------------- AUTH --------------------
+// ---------- Auth ----------
 async function login() {
-  try {
-    const email = $("loginEmail").value.trim();
-    const password = $("loginPassword").value;
+  const email = ($("loginEmail")?.value || "").trim();
+  const password = $("loginPassword")?.value || "";
 
-    const { data, error } = await sb.auth.signInWithPassword({ email, password });
-    if (error) {
-      alert(error.message);
-      return;
-    }
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
 
-    const { data: u } = await sb.auth.getUser();
-    alert("Login OK: " + (u?.user?.email || "KEIN USER"));
-
-    if (data?.session) {
-      await renderLoggedIn(data.session);
-      return;
-    }
-
-    const session = await getSessionWithRetry(12, 250);
-    if (session) {
-      await renderLoggedIn(session);
-      return;
-    }
-
-    alert(
-      "Login erfolgreich, aber keine Session verfügbar.\n" +
-      "Bitte Website-Daten für storyboard-studio.onrender.com löschen."
-    );
-  } catch (e) {
-    console.error(e);
-    alert("LOGIN CRASH:\n" + e.message);
+  if (error) {
+    alert(error.message);
+    return;
   }
+
+  // Wenn Supabase sofort Session liefert: direkt umschalten
+  if (data?.session) {
+    await renderLoggedIn(data.session);
+    return;
+  }
+
+  // Sonst UI über Retry aktualisieren
+  await refreshUI();
 }
 
 async function register() {
-  const email = $("loginEmail").value.trim();
-  const password = $("loginPassword").value;
+  const email = ($("loginEmail")?.value || "").trim();
+  const password = $("loginPassword")?.value || "";
 
   const { error } = await sb.auth.signUp({
     email,
@@ -115,7 +96,7 @@ async function register() {
   });
 
   if (error) alert(error.message);
-  else alert("Registriert. Bitte E-Mail bestätigen.");
+  else alert("Registriert. Bitte E-Mail bestätigen (Spam prüfen).");
 }
 
 async function logout() {
@@ -123,22 +104,23 @@ async function logout() {
   renderLoggedOut();
 }
 
-// -------------------- PROJECTS --------------------
+// ---------- Projects ----------
 async function createProject() {
-  const title = $("npTitle").value.trim();
+  const title = ($("npTitle")?.value || "").trim();
   if (!title) return alert("Titel fehlt");
 
+  // Achtung: Das funktioniert nur, wenn es in Supabase eine Spalte "data" gibt!
   const payload = {
     title,
     data: {
-      editor: $("npEditor").value,
-      cvd: $("npCvd").value,
-      area: $("npArea").value,
-      show: $("npShow").value,
-      format: $("npFormat").value,
-      target: $("npTarget").value,
-      team: $("npTeam").value,
-      short: $("npShort").value,
+      editor: $("npEditor")?.value || "",
+      cvd: $("npCvd")?.value || "",
+      area: $("npArea")?.value || "",
+      show: $("npShow")?.value || "",
+      format: $("npFormat")?.value || "",
+      target: $("npTarget")?.value || "",
+      team: $("npTeam")?.value || "",
+      short: $("npShort")?.value || "",
     },
   };
 
@@ -149,6 +131,7 @@ async function createProject() {
 
 async function loadProjects() {
   const list = $("projectList");
+  if (!list) return;
   list.innerHTML = "";
 
   const { data, error } = await sb
@@ -161,7 +144,7 @@ async function loadProjects() {
     return;
   }
 
-  data.forEach((p) => {
+  (data || []).forEach((p) => {
     const div = document.createElement("div");
     div.className = "project-item";
     div.textContent = p.title;
@@ -169,20 +152,27 @@ async function loadProjects() {
   });
 }
 
-// -------------------- START --------------------
+// ---------- Start ----------
 document.addEventListener("DOMContentLoaded", async () => {
   try {
     await initSupabase();
 
-    $("btnLogin").onclick = login;
-    $("btnRegister").onclick = register;
-    $("btnLogout").onclick = logout;
-    $("btnCreateProject").onclick = createProject;
+    const btnLogin = $("btnLogin");
+    if (btnLogin) btnLogin.onclick = login;
+
+    const btnRegister = $("btnRegister");
+    if (btnRegister) btnRegister.onclick = register;
+
+    const btnLogout = $("btnLogout");
+    if (btnLogout) btnLogout.onclick = logout;
+
+    const btnCreate = $("btnCreateProject");
+    if (btnCreate) btnCreate.onclick = createProject;
 
     sb.auth.onAuthStateChange(() => refreshUI());
     await refreshUI();
   } catch (e) {
     console.error(e);
-    alert("INIT FEHLER:\n" + e.message);
+    alert(String(e.message || e));
   }
 });
