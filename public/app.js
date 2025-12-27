@@ -3,143 +3,163 @@
 let sb;
 
 const $ = (id) => document.getElementById(id);
+const show = (id, on) => $(id).classList.toggle("hidden", !on);
 
-function show(id, on) {
-  const el = $(id);
-  if (!el) return console.warn("show(): missing", id);
-  el.classList.toggle("hidden", !on);
-}
-
-function canUseLocalStorage() {
-  try {
-    const k = "__sb_test__";
-    localStorage.setItem(k, "1");
-    localStorage.removeItem(k);
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
+const log = (...args) => console.log("[SB]", ...args);
+const warn = (...args) => console.warn("[SB]", ...args);
+const err = (...args) => console.error("[SB]", ...args);
 
 async function initSupabase() {
+  log("initSupabase: start");
+
   if (!window.supabase) throw new Error("Supabase JS not loaded (window.supabase missing).");
 
-  const res = await fetch("/config", { cache: "no-store" });
-  if (!res.ok) throw new Error(`/config failed: ${res.status} ${await res.text()}`);
-  const cfg = await res.json();
+  // Storage quick check
+  try {
+    localStorage.setItem("__sb_test__", "1");
+    localStorage.removeItem("__sb_test__");
+    log("localStorage: OK");
+  } catch (e) {
+    warn("localStorage: BLOCKED", e);
+  }
 
-  // Auth-Config explizit setzen (kein „Defaults raten“)
+  const res = await fetch("/config", { cache: "no-store" });
+  log("/config status:", res.status);
+
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`/config failed: ${res.status} ${t}`);
+  }
+
+  const cfg = await res.json();
+  log("cfg:", {
+    url: cfg.SUPABASE_URL,
+    anonKeyLen: (cfg.SUPABASE_ANON_KEY || "").length,
+  });
+
   sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
-      storage: canUseLocalStorage() ? window.localStorage : undefined,
+      // explizit localStorage erzwingen
+      storage: window.localStorage,
     },
   });
 
-  console.log("[SB] init ok", {
-    url: cfg.SUPABASE_URL,
-    hasKey: !!cfg.SUPABASE_ANON_KEY,
-    localStorageOk: canUseLocalStorage(),
-  });
+  log("initSupabase: client created");
 }
 
 function renderLoggedOut() {
+  log("renderLoggedOut()");
   show("authView", true);
   show("dashboardView", false);
   show("btnLogout", false);
-  const ui = $("userInfo");
-  if (ui) ui.textContent = "Nicht eingeloggt";
+  $("userInfo").textContent = "Nicht eingeloggt";
 }
 
 async function renderLoggedIn(session) {
+  log("renderLoggedIn()", { email: session?.user?.email });
+
   show("authView", false);
   show("dashboardView", true);
   show("btnLogout", true);
-  const ui = $("userInfo");
-  if (ui) ui.textContent = session.user?.email || "Eingeloggt";
+  $("userInfo").textContent = session.user.email;
 
-  // projects laden darf die UI nicht killen
+  // Ganz wichtig: Fehler hier sichtbar machen
   try {
     await loadProjects();
   } catch (e) {
-    console.error("[SB] loadProjects crashed:", e);
-    alert("Eingeloggt, aber loadProjects() ist abgestürzt: " + (e?.message || e));
+    err("loadProjects crashed:", e);
+    alert("Login ok, aber loadProjects crashed: " + (e?.message || e));
   }
 }
 
-async function getSessionWithRetry(tries = 20, delayMs = 250) {
+async function getSessionOnce() {
+  const { data, error } = await sb.auth.getSession();
+  if (error) err("getSession error:", error);
+  log("getSession -> hasSession:", !!data?.session);
+  return data?.session || null;
+}
+
+async function getSessionWithRetry(tries = 12, delayMs = 250) {
   for (let i = 0; i < tries; i++) {
-    const { data, error } = await sb.auth.getSession();
-    if (error) console.error("[SB] getSession error:", error);
-    if (data?.session) return data.session;
+    const s = await getSessionOnce();
+    if (s) return s;
     await new Promise((r) => setTimeout(r, delayMs));
   }
   return null;
 }
 
 async function refreshUI() {
-  const session = await getSessionWithRetry(8, 150);
-  console.log("[SB] refreshUI session:", !!session);
+  log("refreshUI()");
+  const session = await getSessionOnce();
   if (!session) return renderLoggedOut();
-  await renderLoggedIn(session);
+  return renderLoggedIn(session);
 }
 
-// ---------- Auth ----------
+// Auth actions
 async function login() {
-  const email = ($("loginEmail")?.value || "").trim();
-  const password = $("loginPassword")?.value || "";
+  const email = $("loginEmail").value.trim();
+  const password = $("loginPassword").value;
 
-  console.log("[SB] login start", { email });
+  log("login(): start", { email });
 
   const { data, error } = await sb.auth.signInWithPassword({ email, password });
 
-  console.log("[SB] signIn result", { hasUser: !!data?.user, hasSession: !!data?.session, error });
+  log("signInWithPassword(): returned", {
+    hasUser: !!data?.user,
+    hasSession: !!data?.session,
+    error: error ? error.message : null,
+  });
 
   if (error) {
     alert(error.message);
     return;
   }
 
-  // Wenn Session direkt da ist: sofort UI umschalten
+  // a) Sofort-Session
   if (data?.session) {
+    log("login(): got immediate session");
     await renderLoggedIn(data.session);
     return;
   }
 
-  // Sonst: nochmal Session ziehen
-  const session = await getSessionWithRetry(20, 250);
-  console.log("[SB] post-login session after retry:", !!session);
+  // b) Nachziehen (wenn Supabase Session minimal verzögert persistiert)
+  log("login(): no session returned, retry getSession...");
+  const session = await getSessionWithRetry(20, 200);
+
+  log("login(): session after retry:", !!session);
 
   if (session) {
     await renderLoggedIn(session);
     return;
   }
 
-  // Jetzt ist es eindeutig Storage/Session-Persistenz
-  const lsOk = canUseLocalStorage();
-  let lsKeys = [];
-  try {
-    lsKeys = Object.keys(localStorage || {}).filter((k) => k.includes("supabase") || k.includes("sb-"));
-  } catch {}
-
   alert(
-    "Login war anscheinend erfolgreich, aber es gibt keine Session im Browser.\n\n" +
-      "localStorage ok: " + lsOk + "\n" +
-      "localStorage keys (supabase/sb-*): " + (lsKeys.join(", ") || "-") + "\n\n" +
-      "Bitte Console öffnen: dort stehen die Debug-Logs [SB]."
+    "Login war erfolgreich, aber es konnte keine Session gespeichert/geladen werden.\n" +
+      "Das ist fast immer Storage/Cookie/Blocker.\n\n" +
+      "Test: Öffne DevTools → Application → Local Storage → storyboard-studio.onrender.com\n" +
+      "und prüfe, ob Einträge mit 'sb-' / 'supabase' erscheinen."
   );
 }
 
 async function register() {
-  const email = ($("loginEmail")?.value || "").trim();
-  const password = $("loginPassword")?.value || "";
+  const email = $("loginEmail").value.trim();
+  const password = $("loginPassword").value;
 
-  const { error } = await sb.auth.signUp({
+  log("register(): start", { email });
+
+  const { data, error } = await sb.auth.signUp({
     email,
     password,
     options: { emailRedirectTo: window.location.origin },
+  });
+
+  log("signUp(): returned", {
+    hasUser: !!data?.user,
+    hasSession: !!data?.session,
+    error: error ? error.message : null,
   });
 
   if (error) alert(error.message);
@@ -147,41 +167,52 @@ async function register() {
 }
 
 async function logout() {
+  log("logout(): start");
   await sb.auth.signOut();
   renderLoggedOut();
 }
 
-// ---------- Projects ----------
+// Projects
 async function createProject() {
-  const title = ($("npTitle")?.value || "").trim();
+  const title = $("npTitle").value.trim();
   if (!title) return alert("Titel fehlt");
 
-  // Hinweis: erfordert DB-Spalte "data" (jsonb). Sonst kommt der bekannte Fehler.
   const payload = {
     title,
     data: {
-      editor: $("npEditor")?.value || "",
-      cvd: $("npCvd")?.value || "",
-      area: $("npArea")?.value || "",
-      show: $("npShow")?.value || "",
-      format: $("npFormat")?.value || "",
-      target: $("npTarget")?.value || "",
-      team: $("npTeam")?.value || "",
-      short: $("npShort")?.value || "",
+      editor: $("npEditor").value,
+      cvd: $("npCvd").value,
+      area: $("npArea").value,
+      show: $("npShow").value,
+      format: $("npFormat").value,
+      target: $("npTarget").value,
+      team: $("npTeam").value,
+      short: $("npShort").value,
     },
   };
 
-  const { error } = await sb.from("projects").insert([payload]);
+  log("createProject(): inserting", payload);
+
+  const { data, error } = await sb.from("projects").insert([payload]).select();
+
+  log("createProject(): result", { ok: !error, error: error?.message, data });
+
   if (error) alert(error.message);
   else await loadProjects();
 }
 
 async function loadProjects() {
+  log("loadProjects(): start");
+
   const list = $("projectList");
-  if (!list) return;
   list.innerHTML = "";
 
-  const { data, error } = await sb.from("projects").select("id,title").order("created_at", { ascending: false });
+  const { data, error } = await sb
+    .from("projects")
+    .select("id,title,created_at")
+    .order("created_at", { ascending: false });
+
+  log("loadProjects(): result", { count: data?.length || 0, error: error?.message || null });
 
   if (error) {
     list.textContent = error.message;
@@ -196,24 +227,26 @@ async function loadProjects() {
   });
 }
 
-// ---------- Start ----------
+// Start
 document.addEventListener("DOMContentLoaded", async () => {
   try {
+    log("DOM ready");
+
     await initSupabase();
 
-    $("btnLogin") && ($("btnLogin").onclick = login);
-    $("btnRegister") && ($("btnRegister").onclick = register);
-    $("btnLogout") && ($("btnLogout").onclick = logout);
-    $("btnCreateProject") && ($("btnCreateProject").onclick = createProject);
+    $("btnLogin").onclick = login;
+    $("btnRegister").onclick = register;
+    $("btnLogout").onclick = logout;
+    $("btnCreateProject").onclick = createProject;
 
-    sb.auth.onAuthStateChange((event) => {
-      console.log("[SB] onAuthStateChange:", event);
+    sb.auth.onAuthStateChange((event, session) => {
+      log("onAuthStateChange:", event, { hasSession: !!session });
       refreshUI();
     });
 
     await refreshUI();
   } catch (e) {
-    console.error(e);
+    err("BOOT ERROR:", e);
     alert(String(e.message || e));
   }
 });
