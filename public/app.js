@@ -39,7 +39,8 @@ async function refreshUI() {
   show("btnLogout", true);
   $("userInfo").textContent = session.user.email;
 
-  loadProjects();
+  // Projektliste nur laden, wenn Dashboard sichtbar ist
+  await loadProjects();
 }
 
 // Auth actions
@@ -47,8 +48,19 @@ async function login() {
   const email = $("loginEmail").value.trim();
   const password = $("loginPassword").value;
 
-  const { error } = await sb.auth.signInWithPassword({ email, password });
-  if (error) alert(error.message);
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  // WICHTIG: UI aktiv aktualisieren (nicht nur auf onAuthStateChange hoffen)
+  if (!data?.session) {
+    // selten, aber möglich: Session wird nicht sofort gesetzt
+    await new Promise((r) => setTimeout(r, 150));
+  }
+  await refreshUI();
 }
 
 async function register() {
@@ -70,6 +82,7 @@ async function register() {
 
 async function logout() {
   await sb.auth.signOut();
+  await refreshUI();
 }
 
 // Projects
@@ -90,7 +103,7 @@ async function createProject() {
 
   const { error } = await sb.from("projects").insert([{ title, data }]);
   if (error) alert(error.message);
-  else loadProjects();
+  else await loadProjects();
 }
 
 async function loadProjects() {
