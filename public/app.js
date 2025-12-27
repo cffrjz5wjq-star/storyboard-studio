@@ -1,22 +1,33 @@
 "use strict";
 
-let sb; // Supabase client
+let sb;
 
+// Helper
 const $ = (id) => document.getElementById(id);
-const show = (id, on) => $(id).classList.toggle("hidden", !on);
+const show = (id, on) => {
+  const el = $(id);
+  if (!el) {
+    alert("UI-Element fehlt: #" + id);
+    return;
+  }
+  el.classList.toggle("hidden", !on);
+};
 
+// -------------------- Supabase Init --------------------
 async function initSupabase() {
-  if (!window.supabase) throw new Error("Supabase JS not loaded (window.supabase missing).");
+  if (!window.supabase) throw new Error("Supabase JS nicht geladen");
 
   const res = await fetch("/config", { cache: "no-store" });
   if (!res.ok) {
     const t = await res.text();
-    throw new Error(`/config failed: ${res.status} ${t}`);
+    throw new Error("/config Fehler: " + res.status + " " + t);
   }
+
   const cfg = await res.json();
   sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
 }
 
+// -------------------- UI States --------------------
 function renderLoggedOut() {
   show("authView", true);
   show("dashboardView", false);
@@ -29,15 +40,21 @@ async function renderLoggedIn(session) {
   show("dashboardView", true);
   show("btnLogout", true);
   $("userInfo").textContent = session.user.email;
-  await loadProjects();
+
+  try {
+    await loadProjects();
+  } catch (e) {
+    console.error(e);
+    alert("Login OK, aber loadProjects() abgestürzt:\n" + e.message);
+  }
 }
 
-async function getSessionWithRetry(tries = 10, delayMs = 200) {
+// -------------------- Session Handling --------------------
+async function getSessionWithRetry(tries = 10, delay = 250) {
   for (let i = 0; i < tries; i++) {
-    const { data, error } = await sb.auth.getSession();
-    if (error) console.error("getSession error:", error);
+    const { data } = await sb.auth.getSession();
     if (data?.session) return data.session;
-    await new Promise((r) => setTimeout(r, delayMs));
+    await new Promise((r) => setTimeout(r, delay));
   }
   return null;
 }
@@ -51,36 +68,40 @@ async function refreshUI() {
   await renderLoggedIn(session);
 }
 
-// Auth actions
+// -------------------- AUTH --------------------
 async function login() {
-  const email = $("loginEmail").value.trim();
-  const password = $("loginPassword").value;
+  try {
+    const email = $("loginEmail").value.trim();
+    const password = $("loginPassword").value;
 
-  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) {
+      alert(error.message);
+      return;
+    }
 
-  if (error) {
-    alert(error.message);
-    return;
+    const { data: u } = await sb.auth.getUser();
+    alert("Login OK: " + (u?.user?.email || "KEIN USER"));
+
+    if (data?.session) {
+      await renderLoggedIn(data.session);
+      return;
+    }
+
+    const session = await getSessionWithRetry(12, 250);
+    if (session) {
+      await renderLoggedIn(session);
+      return;
+    }
+
+    alert(
+      "Login erfolgreich, aber keine Session verfügbar.\n" +
+      "Bitte Website-Daten für storyboard-studio.onrender.com löschen."
+    );
+  } catch (e) {
+    console.error(e);
+    alert("LOGIN CRASH:\n" + e.message);
   }
-
-  // 1) Wenn Supabase sofort eine Session liefert: direkt verwenden
-  if (data?.session) {
-    await renderLoggedIn(data.session);
-    return;
-  }
-
-  // 2) Sonst: Session ein paar Mal nachziehen
-  const session = await getSessionWithRetry(12, 250);
-  if (session) {
-    await renderLoggedIn(session);
-    return;
-  }
-
-  // 3) Wenn nach erfolgreichem Login trotzdem keine Session da ist: Storage-Problem
-  alert(
-    "Login war erfolgreich, aber es konnte keine Session gespeichert/geladen werden.\n" +
-      "Bitte prüfe: Private-Browsing aus, Content-Blocker aus, Website-Daten für storyboard-studio.onrender.com löschen."
-  );
 }
 
 async function register() {
@@ -94,7 +115,7 @@ async function register() {
   });
 
   if (error) alert(error.message);
-  else alert("Registriert. Bitte E-Mail bestätigen (Spam prüfen).");
+  else alert("Registriert. Bitte E-Mail bestätigen.");
 }
 
 async function logout() {
@@ -102,7 +123,7 @@ async function logout() {
   renderLoggedOut();
 }
 
-// Projects
+// -------------------- PROJECTS --------------------
 async function createProject() {
   const title = $("npTitle").value.trim();
   if (!title) return alert("Titel fehlt");
@@ -140,7 +161,7 @@ async function loadProjects() {
     return;
   }
 
-  (data || []).forEach((p) => {
+  data.forEach((p) => {
     const div = document.createElement("div");
     div.className = "project-item";
     div.textContent = p.title;
@@ -148,7 +169,7 @@ async function loadProjects() {
   });
 }
 
-// Start
+// -------------------- START --------------------
 document.addEventListener("DOMContentLoaded", async () => {
   try {
     await initSupabase();
@@ -162,6 +183,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     await refreshUI();
   } catch (e) {
     console.error(e);
-    alert(String(e.message || e));
+    alert("INIT FEHLER:\n" + e.message);
   }
 });
