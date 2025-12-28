@@ -280,7 +280,7 @@ function getCurrentUserEmail() {
 function getProjectIdFromUrl() {
   try {
     const params = new URLSearchParams(window.location.search);
-    return params.get("projectId");
+    return params.get("project_id");
   } catch {
     return null;
   }
