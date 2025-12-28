@@ -2,9 +2,11 @@
 
 let sb;
 
+// ---------- Helper ----------
 const $ = (id) => document.getElementById(id);
 const show = (id, on) => $(id).classList.toggle("hidden", !on);
 
+// ---------- Supabase Init ----------
 async function initSupabase() {
   if (!window.supabase) throw new Error("Supabase JS not loaded.");
 
@@ -22,6 +24,7 @@ async function initSupabase() {
   });
 }
 
+// ---------- UI ----------
 function renderLoggedOut() {
   show("authView", true);
   show("dashboardView", false);
@@ -35,7 +38,6 @@ async function renderLoggedIn(session) {
   show("btnLogout", true);
   $("userInfo").textContent = session.user.email;
 
-  // Projekte laden ist nice-to-have – darf UI nicht blockieren
   try {
     await loadProjects();
   } catch (e) {
@@ -43,19 +45,9 @@ async function renderLoggedIn(session) {
   }
 }
 
-async function getSessionRetry(tries = 12, delayMs = 250) {
-  for (let i = 0; i < tries; i++) {
-    const { data, error } = await sb.auth.getSession();
-    if (error) console.error("getSession error:", error);
-    if (data?.session) return data.session;
-    await new Promise((r) => setTimeout(r, delayMs));
-  }
-  return null;
-}
-
 async function refreshUI() {
   const { data, error } = await sb.auth.getSession();
-  if (error) console.error("refreshUI getSession error:", error);
+  if (error) console.error(error);
 
   const session = data?.session;
   if (!session) return renderLoggedOut();
@@ -66,35 +58,18 @@ async function refreshUI() {
 async function login() {
   const email = $("loginEmail").value.trim();
   const password = $("loginPassword").value;
-
-  console.log("[login] start", { email });
+  if (!email || !password) return alert("E-Mail oder Passwort fehlt.");
 
   const { error } = await sb.auth.signInWithPassword({ email, password });
-  if (error) {
-    console.log("[login] error", error);
-    alert(error.message);
-    return;
-  }
+  if (error) return alert(error.message);
 
-  // Wichtig: NICHT auf data.session verlassen – IMMER nachziehen
-  const session = await getSessionRetry(12, 250);
-  console.log("[login] session after retry:", !!session);
-
-  if (!session) {
-    alert(
-      "Login war ok, aber Session wird im Browser nicht verfügbar.\n" +
-        "Bitte teste einmal: Seite hart neu laden (Cmd+Shift+R), und in Chrome: Site-Daten löschen.\n" +
-        "Wenn es dann geht, war es ein Storage/Cache-Thema."
-    );
-    return;
-  }
-
-  await renderLoggedIn(session);
+  await refreshUI();
 }
 
 async function register() {
   const email = $("loginEmail").value.trim();
   const password = $("loginPassword").value;
+  if (!email || !password) return alert("E-Mail oder Passwort fehlt.");
 
   const { error } = await sb.auth.signUp({
     email,
@@ -114,29 +89,35 @@ async function logout() {
 // ---------- PROJECTS ----------
 async function createProject() {
   const title = $("npTitle").value.trim();
-  if (!title) return alert("Titel fehlt");
+  if (!title) return alert("Titel fehlt.");
 
   const { data: sessData } = await sb.auth.getSession();
   const session = sessData?.session;
   if (!session) return alert("Nicht eingeloggt.");
 
   const meta = {
-    editor: $("npEditor").value,
-    cvd: $("npCvd").value,
-    area: $("npArea").value,
-    show: $("npShow").value,
-    format: $("npFormat").value,
-    target: $("npTarget").value,
-    team: $("npTeam").value,
-    short: $("npShort").value,
+    editor: $("npEditor").value.trim(),
+    cvd: $("npCvd").value.trim(),
+    area: $("npArea").value.trim(),
+    show: $("npShow").value.trim(),
+    format: $("npFormat").value.trim(),
+    target: $("npTarget").value.trim(),
+    team: $("npTeam").value.trim(),
+    short: $("npShort").value.trim(),
   };
 
-  const { error } = await sb
+  const { data, error } = await sb
     .from("projects")
-    .insert([{ user_id: session.user.id, title, meta }]);
+    .insert([{ user_id: session.user.id, title, meta }])
+    .select("id")
+    .single();
 
-  if (error) alert(error.message);
-  else await loadProjects();
+  if (error) return alert(error.message);
+
+  await loadProjects();
+
+  // optional: direkt öffnen
+  // window.location.href = `project.html?project_id=${encodeURIComponent(data.id)}`;
 }
 
 async function loadProjects() {
@@ -153,6 +134,7 @@ async function loadProjects() {
   const { data, error } = await sb
     .from("projects")
     .select("id,title,created_at")
+    .eq("user_id", session.user.id)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -168,19 +150,20 @@ async function loadProjects() {
     row.style.alignItems = "center";
     row.style.gap = "0.5rem";
 
-    const t = document.createElement("div");
-    t.textContent = p.title;
-    t.style.flex = "1";
+    const title = document.createElement("div");
+    title.textContent = p.title;
+    title.style.flex = "1";
 
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "small";
     btn.textContent = "Öffnen";
     btn.onclick = () => {
-      window.location.href = `project.html?project_id=${encodeURIComponent(p.id)}`;
+      window.location.href =
+        `project.html?project_id=${encodeURIComponent(p.id)}`;
     };
 
-    row.appendChild(t);
+    row.appendChild(title);
     row.appendChild(btn);
     list.appendChild(row);
   });
@@ -196,11 +179,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("btnLogout").onclick = logout;
     $("btnCreateProject").onclick = createProject;
 
-    // Wichtig: Auth-State-Events sauber behandeln
-    sb.auth.onAuthStateChange((event) => {
-      console.log("[auth]", event);
-      refreshUI();
-    });
+    sb.auth.onAuthStateChange(() => refreshUI());
 
     await refreshUI();
   } catch (e) {
