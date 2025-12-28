@@ -7,37 +7,24 @@
 
   <link rel="stylesheet" href="styles.css" />
 
-  <!-- Mammoth DOCX-Import -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script src="https://unpkg.com/mammoth/mammoth.browser.min.js"></script>
 
   <style>
-    /* Zusätzliche Styles, falls noch nicht in styles.css vorhanden */
     .hidden-col { display:none !important; }
     .row-selected { background:#fef3c7 !important; }
     tr.dragging { opacity:0.5; }
     tr.drag-over { outline:2px dashed #ff8a3c; }
 
-    .lightbox {
-      position:fixed; inset:0;
-      background:rgba(0,0,0,0.7);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      z-index:1000;
-    }
-    .lightbox.hidden { display:none; }
-    .lightbox-inner img {
-      max-width:90vw; max-height:90vh;
-      border-radius:8px;
-    }
+    .hidden-file { display:none; }
 
+    /* Bilder UI bleibt, aber Upload kommt später */
     .images-thumbs img {
       width:60px; height:auto;
       border-radius:4px;
       cursor:pointer;
       margin-right:4px;
     }
-    .hidden-file { display:none; }
   </style>
 </head>
 
@@ -45,7 +32,6 @@
 <div class="app-shell">
   <div class="app project-app">
 
-    <!-- Header -->
     <header class="project-header">
       <div class="header-left">
         <div class="logo-badge">SB</div>
@@ -61,10 +47,8 @@
       </div>
     </header>
 
-    <!-- Inhalt -->
     <main class="project-main">
 
-      <!-- Projekt-Metadaten -->
       <section class="card">
         <div class="card-header">
           <div>
@@ -73,7 +57,7 @@
           </div>
 
           <div style="display:flex; gap:0.4rem;">
-            <button id="btnDeleteProject" class="danger small">Projekt löschen / archivieren</button>
+            <button id="btnDeleteProject" class="danger small">Projekt löschen</button>
             <button id="btnSaveProject" class="primary small">Projekt speichern</button>
           </div>
         </div>
@@ -114,13 +98,12 @@
         </div>
       </section>
 
-      <!-- Takes -->
       <section class="card">
         <div class="card-header">
           <div>
             <div class="card-title">Drehbuch &amp; Takes</div>
             <div class="card-subtitle">
-              Takes, Bilder, Sprechertexte und Timecodes bearbeiten. DOCX-Import möglich.
+              Takes, Sprechertexte und Timecodes bearbeiten. DOCX-Import möglich.
             </div>
           </div>
 
@@ -132,7 +115,6 @@
           </div>
         </div>
 
-        <!-- Spalten-Toggles -->
         <div class="toolbar">
           <div class="column-toggle-bar">
             <strong>Spalten:</strong>
@@ -154,7 +136,6 @@
           </div>
         </div>
 
-        <!-- DOCX Import -->
         <div class="field">
           <label for="docxFile">DOCX-Datei (Word) importieren</label>
           <div style="display:flex; gap:0.4rem;">
@@ -162,11 +143,10 @@
             <button id="btnImportDocx" class="small">DOCX importieren</button>
           </div>
           <div id="docxInfo" class="muted" style="margin-top:0.3rem;">
-            Tabellen mit Takes, Kameras, Sprechertext usw. werden automatisch erkannt.
+            Tabellen mit Takes werden erkannt.
           </div>
         </div>
 
-        <!-- Tabelle -->
         <div class="table-wrapper">
           <table class="takes-table" id="takesTable">
             <thead>
@@ -187,7 +167,6 @@
           </table>
         </div>
 
-        <!-- Projektnotizen -->
         <div class="field" style="margin-top:0.6rem;">
           <label>Allgemeine Projekt-Notizen</label>
           <textarea id="projectNotes"></textarea>
@@ -199,558 +178,40 @@
   </div>
 </div>
 
-<!-- Lightbox -->
-<div id="lightbox" class="lightbox hidden">
-  <div class="lightbox-inner">
-    <img id="lightboxImg" src="" alt="" />
-  </div>
-</div>
-
-<!-- Haupt-Editor-Logik -->
 <script>
-// =============================================
-// Storyboard Studio – Projekt-Editor
-// =============================================
+"use strict";
 
 const TC_FPS = 25;
+let sb;
+let projectId = null;
+let currentProject = { id:null, title:"", takes:[] };
 
-// --------- Helper ---------
 function $(id) { return document.getElementById(id); }
 
-function loadJSON(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch (e) {
-    console.error("loadJSON", key, e);
-    return fallback;
-  }
-}
-
-function saveJSON(key, value) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (e) {
-    console.error("saveJSON", key, e);
-  }
-}
-
-function safeKey(str) {
-  return String(str || "").toLowerCase().replace(/[^a-z0-9]+/g, "_");
-}
-
-// --------- Timecode helper ---------
-function parseTimecode(tc) {
-  if (!tc) return 0;
-  const parts = tc.split(":").map(Number);
-  while (parts.length < 4) parts.unshift(0);
-  const [h, m, s, f] = parts;
-  return (((h * 60 + m) * 60) + s) * TC_FPS + f;
-}
-
-function formatTimecode(frames) {
-  if (frames < 0) frames = 0;
-  const f = frames % TC_FPS;
-  let totalSeconds = (frames - f) / TC_FPS;
-  const s = totalSeconds % 60;
-  totalSeconds = (totalSeconds - s) / 60;
-  const m = totalSeconds % 60;
-  const h = (totalSeconds - m) / 60;
-  const pad = n => String(n).padStart(2, "0");
-  return `${pad(h)}:${pad(m)}:${pad(s)}:${pad(f)}`;
-}
-
-function estimateDurationSeconds(text) {
-  if (!text) return 0;
-  const words = text.trim().split(/\s+/).length;
-  const wps = 3.0; // grob
-  return Math.ceil(words / wps);
-}
-
-// --------- Projekt / Storage ---------
-let currentProject = null;
-let projectsKey = null;
-let archiveKey = null;
-
-function getCurrentUserEmail() {
-  const session = loadJSON("sb_session", null);
-  return session && session.email ? session.email : "local_guest";
+async function initSupabase() {
+  const res = await fetch("/config", { cache: "no-store" });
+  if (!res.ok) throw new Error("/config failed");
+  const cfg = await res.json();
+  sb = window.supabase.createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY, {
+    auth: { persistSession:true, autoRefreshToken:true, detectSessionInUrl:true, storageKey:"sb-auth" }
+  });
 }
 
 function getProjectIdFromUrl() {
-  try {
-    const params = new URLSearchParams(window.location.search);
-    return params.get("project_id");
-  } catch {
+  const params = new URLSearchParams(window.location.search);
+  return params.get("project_id");
+}
+
+async function requireSessionOrBack() {
+  const { data } = await sb.auth.getSession();
+  if (!data?.session) {
+    alert("Bitte einloggen.");
+    window.location.href = "index.html";
     return null;
   }
+  return data.session;
 }
 
-function loadProjectsForEditor() {
-  if (!projectsKey) return [];
-  return loadJSON(projectsKey, []);
-}
-
-function saveProjectsForEditor(list) {
-  if (!projectsKey) return;
-  saveJSON(projectsKey, list);
-}
-
-function createEmptyProject() {
-  const now = new Date().toISOString();
-  return {
-    id: "proj_" + Date.now().toString(36),
-    title: "Unbenanntes Projekt",
-    editor: "",
-    cvd: "",
-    area: "",
-    show: "",
-    format: "",
-    shortDesc: "",
-    notes: "",
-    createdAt: now,
-    updatedAt: now,
-    takes: []
-  };
-}
-
-function initProjectFromStorage() {
-  const email = getCurrentUserEmail();
-  projectsKey = "sb_projects_" + safeKey(email);
-  archiveKey = projectsKey + "_archiv";
-
-  const all = loadProjectsForEditor();
-  const urlId = getProjectIdFromUrl();
-  let active = null;
-
-  if (urlId) {
-    active = all.find(p => p.id === urlId) || null;
-  }
-
-  if (!active) {
-    active = loadJSON("sb_active_project", null);
-  }
-
-  if (!active && all.length) {
-    active = all[0];
-  }
-
-  if (!active) {
-    active = createEmptyProject();
-    all.push(active);
-    saveProjectsForEditor(all);
-  }
-
-  if (!Array.isArray(active.takes)) active.takes = [];
-
-  currentProject = active;
-  saveJSON("sb_active_project", active);
-
-  hydrateUiFromProject();
-}
-
-function hydrateUiFromProject() {
-  const p = currentProject || {};
-  $("peTitle").value  = p.title     || "";
-  $("peEditor").value = p.editor    || "";
-  $("peCvd").value    = p.cvd       || "";
-  $("peArea").value   = p.area      || "";
-  $("peShow").value   = p.show      || "";
-  $("peFormat").value = p.format    || "";
-  $("peShort").value  = p.shortDesc || "";
-  $("peId").value     = p.id        || "";
-  $("projectNotes").value = p.notes || "";
-
-  $("projTitle").textContent = p.title || "Projekt";
-  $("projectHeaderTitle").textContent = p.title || "";
-
-  const metaParts = [];
-  if (p.show) metaParts.push(p.show);
-  if (p.format) metaParts.push(p.format);
-  $("projSubtitle").textContent = metaParts.join(" · ");
-
-  renderTakesTable();
-}
-
-function syncProjectMetaFromUi() {
-  if (!currentProject) return;
-  const p = currentProject;
-  p.title     = $("peTitle").value.trim();
-  p.editor    = $("peEditor").value.trim();
-  p.cvd       = $("peCvd").value.trim();
-  p.area      = $("peArea").value.trim();
-  p.show      = $("peShow").value.trim();
-  p.format    = $("peFormat").value.trim();
-  p.shortDesc = $("peShort").value.trim();
-  p.notes     = $("projectNotes").value;
-  p.updatedAt = new Date().toISOString();
-}
-
-// Projektliste + aktives Projekt im Storage aktualisieren
-function persistCurrentProject() {
-  if (!currentProject) return;
-  const all = loadProjectsForEditor();
-  const idx = all.findIndex(p => p.id === currentProject.id);
-  if (idx >= 0) {
-    all[idx] = currentProject;
-  } else {
-    all.push(currentProject);
-  }
-  saveProjectsForEditor(all);
-  saveJSON("sb_active_project", currentProject);
-}
-
-// --------- Takes-Rendering ---------
-function renderTakesTable() {
-  const tbody = $("takesBody");
-  tbody.innerHTML = "";
-
-  const takes = currentProject && currentProject.takes ? currentProject.takes : [];
-
-  takes.forEach((t, idx) => {
-    const tr = document.createElement("tr");
-    tr.dataset.index = idx;
-    tr.draggable = true;
-
-    tr.innerHTML = `
-      <td data-col="take">
-        <input type="text" data-field="take" data-index="${idx}" value="${t.take || (idx + 1)}">
-      </td>
-      <td data-col="tcIn">
-        <input type="text" data-field="tcIn" data-index="${idx}" value="${t.tcIn || ""}" placeholder="00:00:00:00">
-      </td>
-      <td data-col="tcOut">
-        <input type="text" data-field="tcOut" data-index="${idx}" value="${t.tcOut || ""}" placeholder="00:00:00:00">
-      </td>
-      <td data-col="camera">
-        <textarea data-field="camera" data-index="${idx}">${t.camera || ""}</textarea>
-      </td>
-      <td data-col="speaker">
-        <textarea data-field="speaker" data-index="${idx}">${t.speaker || ""}</textarea>
-      </td>
-      <td data-col="persons">
-        <textarea data-field="persons" data-index="${idx}">${t.persons || ""}</textarea>
-      </td>
-      <td data-col="notes">
-        <textarea data-field="notes" data-index="${idx}">${t.notes || ""}</textarea>
-      </td>
-      <td data-col="music">
-        <textarea data-field="music" data-index="${idx}">${t.music || ""}</textarea>
-      </td>
-      <td data-col="source">
-        <textarea data-field="source" data-index="${idx}">${t.source || ""}</textarea>
-      </td>
-      <td data-col="images">
-        <div class="images-cell">
-          <div class="images-thumbs" id="thumbs-${idx}"></div>
-          <label class="small">
-            <input type="file" accept="image/*" data-image-index="${idx}" class="hidden-file" multiple>
-            Bilder wählen
-          </label>
-        </div>
-      </td>
-    `;
-
-    // Zeile auswählen
-    tr.addEventListener("click", (e) => {
-      if (["INPUT", "TEXTAREA", "LABEL"].includes(e.target.tagName) || e.target.type === "file") return;
-      tr.classList.toggle("row-selected");
-    });
-
-    // Drag & Drop
-    tr.addEventListener("dragstart", (e) => {
-      e.dataTransfer.setData("text/plain", idx.toString());
-      tr.classList.add("dragging");
-    });
-    tr.addEventListener("dragend", () => tr.classList.remove("dragging"));
-    tr.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      tr.classList.add("drag-over");
-    });
-    tr.addEventListener("dragleave", () => tr.classList.remove("drag-over"));
-    tr.addEventListener("drop", (e) => {
-      e.preventDefault();
-      tr.classList.remove("drag-over");
-      const fromIndex = parseInt(e.dataTransfer.getData("text/plain"), 10);
-      const toIndex = idx;
-      reorderTake(fromIndex, toIndex);
-    });
-
-    tbody.appendChild(tr);
-  });
-
- // Feld-Events
-tbody.querySelectorAll('input[data-field], textarea[data-field]').forEach(el => {
-  el.addEventListener("input", () => {
-    const index = parseInt(el.dataset.index, 10);
-    const field = el.dataset.field;
-    const t = currentProject.takes[index];
-    if (!t) return;
-
-    t[field] = el.value;
-    const autoTc = $("chkAutoTc").checked;
-
-    // ---- Timecodes bei Sprechertext oder manueller In-Änderung neu berechnen ----
-    if (autoTc && (field === "speaker" || field === "tcIn")) {
-      recalcTimecodes();
-
-      // Update NUR In/Out-Felder direkt im DOM, NICHT neu rendern
-      currentProject.takes.forEach((take, i) => {
-        const row = tbody.querySelector(`tr[data-index="${i}"]`);
-        if (!row) return;
-
-        const inInput  = row.querySelector('input[data-field="tcIn"]');
-        const outInput = row.querySelector('input[data-field="tcOut"]');
-        if (inInput)  inInput.value  = take.tcIn  || "";
-        if (outInput) outInput.value = take.tcOut || "";
-      });
-    }
-
-    // Scrollposition NICHT verändern → Sprechertext springt NICHT mehr
-    persistCurrentProject();
-  });
-});
-
-  // Bild-Uploads
-  tbody.querySelectorAll("input[data-image-index]").forEach(input => {
-    input.addEventListener("change", handleImageUpload);
-  });
-
-  // Thumbs rendern
-  currentProject.takes.forEach((t, idx) => renderThumbnailsForTake(idx));
-
-  // Spaltenzustand anwenden
-  applyColumnVisibilityFromToggles();
-}
-
-function addEmptyTake() {
-  if (!currentProject.takes) currentProject.takes = [];
-  const idx = currentProject.takes.length;
-  currentProject.takes.push({
-    take: String(idx + 1),
-    tcIn: "",
-    tcOut: "",
-    camera: "",
-    speaker: "",
-    persons: "",
-    notes: "",
-    music: "",
-    source: "",
-    images: []
-  });
-  renderTakesTable();
-  persistCurrentProject();
-}
-
-function deleteSelectedTakes() {
-  const tbody = $("takesBody");
-  const rows = Array.from(tbody.querySelectorAll("tr.row-selected"));
-  if (!rows.length) {
-    alert("Keine Takes ausgewählt.");
-    return;
-  }
-  if (!confirm(`Wirklich ${rows.length} Take(s) löschen?`)) return;
-
-  const indices = rows.map(r => parseInt(r.dataset.index, 10)).sort((a, b) => b - a);
-  indices.forEach(i => currentProject.takes.splice(i, 1));
-
-  if ($("chkAutoRenumber").checked) {
-    currentProject.takes.forEach((t, i) => t.take = String(i + 1));
-  }
-  if ($("chkAutoTc").checked) {
-    recalcTimecodes();
-  }
-
-  renderTakesTable();
-  persistCurrentProject();
-}
-
-function reorderTake(from, to) {
-  const arr = currentProject.takes;
-  if (from === to) return;
-  if (from < 0 || from >= arr.length || to < 0 || to >= arr.length) return;
-
-  const [moved] = arr.splice(from, 1);
-  arr.splice(to, 0, moved);
-
-  if ($("chkAutoRenumber").checked) {
-    arr.forEach((t, i) => t.take = String(i + 1));
-  }
-  if ($("chkAutoTc").checked) {
-    recalcTimecodes();
-  }
-
-  renderTakesTable();
-  persistCurrentProject();
-}
-
-// Timecodes neu aufbauen – fortlaufend, Basis ist ggf. TC-In vom ersten Take
-function recalcTimecodes() {
-  const takes = currentProject.takes || [];
-  if (!takes.length) return;
-
-  let cursor = 0;
-
-  // Wenn beim ersten Take ein TC-In gesetzt ist, nehmen wir den als Start
-  const firstIn = (takes[0].tcIn || "").trim();
-  if (firstIn) {
-    cursor = parseTimecode(firstIn);
-  }
-
-  takes.forEach(t => {
-    const startFrames = cursor;
-    t.tcIn = formatTimecode(startFrames);
-
-    const durSec = estimateDurationSeconds(t.speaker || "");
-    const endFrames = startFrames + durSec * TC_FPS;
-
-    t.tcOut = formatTimecode(endFrames);
-    cursor = endFrames; // nächster Take setzt hier auf
-  });
-}
-
-// Aktualisiert nur die TC-Felder im DOM, ohne Tabelle neu zu bauen
-function updateTimecodesInDom() {
-  const takes = currentProject.takes || [];
-  takes.forEach((t, idx) => {
-    const inInput = document.querySelector(
-      `input[data-field="tcIn"][data-index="${idx}"]`
-    );
-    const outInput = document.querySelector(
-      `input[data-field="tcOut"][data-index="${idx}"]`
-    );
-    if (inInput) inInput.value = t.tcIn || "";
-    if (outInput) outInput.value = t.tcOut || "";
-  });
-}
-
-// Komfort-Helfer: Berechnen + DOM aktualisieren
-function recalcTimecodesAndUpdateDom() {
-  recalcTimecodes();
-  updateTimecodesInDom();
-}
-
-// --------- DOCX-Import ---------
-function parseDocxHtmlToTakes(html) {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, "text/html");
-
-  const tables = Array.from(doc.querySelectorAll("table"));
-  const takes = [];
-
-  if (tables.length) {
-    tables.forEach((table) => {
-      const rows = Array.from(table.rows || table.querySelectorAll("tr"));
-      if (!rows.length) return;
-
-      // optional: Titelzeile "TITEL: ..." als Szenen-/Filmname merken
-      let sceneTitle = "";
-      const firstCellText =
-        (rows[0].cells[0] && rows[0].cells[0].textContent || "").trim();
-      if (/TITEL:/i.test(firstCellText)) {
-        sceneTitle = firstCellText.replace(/TITEL:\s*/i, "").trim();
-      }
-
-      // ab Zeile 1, weil Zeile 0 häufig Kopf/TITEL enthält
-      for (let ri = 1; ri < rows.length; ri++) {
-        const row = rows[ri];
-        if (!row.cells || row.cells.length < 2) continue;
-
-        const left  = (row.cells[0].textContent || "").trim();
-        const right = (row.cells[1].textContent || "").trim();
-        if (!left && !right) continue;
-
-        const combined = (left + " " + right).toLowerCase();
-
-        // Kopfzeilen wie "Beschreibung / IDEE | Sprechertext" überspringen
-        if (combined.match(/beschreibung|idee|sprechertext/)) continue;
-
-        takes.push({
-          take:    String(takes.length + 1),
-          tcIn:    "",
-          tcOut:   "",
-          camera:  left,   // linke Spalte = Bild/Kamera
-          speaker: right,  // rechte Spalte = Sprechertext
-          persons: "",
-          notes:   sceneTitle || "",
-          music:   "",
-          source:  "",
-          images:  []
-        });
-      }
-    });
-
-    return takes;
-  }
-
-  // Fallback: keine Tabellen -> jeden Absatz als Sprecherzeile
-  const paras = doc.querySelectorAll("p");
-  paras.forEach(p => {
-    const text = p.textContent.trim();
-    if (!text) return;
-    takes.push({
-      take:    String(takes.length + 1),
-      tcIn:    "",
-      tcOut:   "",
-      camera:  "",
-      speaker: text,
-      persons: "",
-      notes:   "",
-      music:   "",
-      source:  "",
-      images:  []
-    });
-  });
-
-  return takes;
-}
-
-function handleDocxImport() {
-  const file = $("docxFile").files && $("docxFile").files[0];
-  if (!file) {
-    $("docxInfo").textContent = "Bitte zuerst eine DOCX-Datei auswählen.";
-    $("docxInfo").style.color = "#b91c1c";
-    return;
-  }
-
-  $("docxInfo").textContent = "DOCX wird verarbeitet …";
-  $("docxInfo").style.color = "#6b7280";
-
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    const arrayBuffer = e.target.result;
-    mammoth.convertToHtml({ arrayBuffer }).then(result => {
-      const html = result.value || "";
-      const imported = parseDocxHtmlToTakes(html);
-      if (!imported.length) {
-        $("docxInfo").textContent = "Keine verwertbaren Tabellen oder Texte gefunden.";
-        $("docxInfo").style.color = "#b91c1c";
-        return;
-      }
-
-      currentProject.takes = (currentProject.takes || []).concat(imported);
-      if ($("chkAutoRenumber").checked) {
-        currentProject.takes.forEach((t, i) => t.take = String(i + 1));
-      }
-      if ($("chkAutoTc").checked) {
-        recalcTimecodes();
-      }
-
-      renderTakesTable();
-      persistCurrentProject();
-
-      $("docxInfo").textContent = `${imported.length} Takes importiert.`;
-      $("docxInfo").style.color = "#15803d";
-    }).catch(err => {
-      console.error(err);
-      $("docxInfo").textContent = "Fehler beim Lesen der DOCX-Datei.";
-      $("docxInfo").style.color = "#b91c1c";
-    });
-  };
-  reader.readAsArrayBuffer(file);
-}
-
-// --------- Spalten / Bilder / PDF ---------
 function applyColumnVisibilityFromToggles() {
   const table = $("takesTable");
   if (!table) return;
@@ -763,101 +224,379 @@ function applyColumnVisibilityFromToggles() {
   });
 }
 
-function handleImageUpload(e) {
-  const input = e.target;
-  const idx = parseInt(input.dataset.imageIndex, 10);
-  const files = Array.from(input.files || []);
-  if (!files.length) return;
+function estimateDurationSeconds(text) {
+  if (!text) return 0;
+  const words = text.trim().split(/\s+/).length;
+  const wps = 3.0;
+  return Math.ceil(words / wps);
+}
+function parseTimecode(tc) {
+  if (!tc) return 0;
+  const parts = tc.split(":").map(Number);
+  while (parts.length < 4) parts.unshift(0);
+  const [h,m,s,f] = parts;
+  return (((h*60+m)*60)+s)*TC_FPS + f;
+}
+function formatTimecode(frames) {
+  if (frames < 0) frames = 0;
+  const f = frames % TC_FPS;
+  let totalSeconds = (frames - f) / TC_FPS;
+  const s = totalSeconds % 60;
+  totalSeconds = (totalSeconds - s) / 60;
+  const m = totalSeconds % 60;
+  const h = (totalSeconds - m) / 60;
+  const pad = n => String(n).padStart(2,"0");
+  return `${pad(h)}:${pad(m)}:${pad(s)}:${pad(f)}`;
+}
+function recalcTimecodes() {
+  const takes = currentProject.takes || [];
+  if (!takes.length) return;
 
-  const take = currentProject.takes[idx];
-  if (!take.images) take.images = [];
+  let cursor = 0;
+  const firstIn = (takes[0].tcIn || "").trim();
+  if (firstIn) cursor = parseTimecode(firstIn);
 
-  const maxSlots = 4;
-  const remaining = maxSlots - take.images.length;
-  const toUse = files.slice(0, remaining);
-
-  toUse.forEach(file => {
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const img = new Image();
-      img.onload = () => {
-        const dataUrl = resizeImageTo1920x1080(img);
-        take.images.push(dataUrl);
-        renderThumbnailsForTake(idx);
-        persistCurrentProject();
-      };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
+  takes.forEach(t => {
+    const startFrames = cursor;
+    t.tcIn = formatTimecode(startFrames);
+    const durSec = estimateDurationSeconds(t.speaker || "");
+    const endFrames = startFrames + durSec * TC_FPS;
+    t.tcOut = formatTimecode(endFrames);
+    cursor = endFrames;
   });
 }
 
-function resizeImageTo1920x1080(img) {
-  const maxW = 1920;
-  const maxH = 1080;
-  let { width, height } = img;
-  const ratio = Math.min(maxW / width, maxH / height);
-  width = Math.round(width * ratio);
-  height = Math.round(height * ratio);
+function renderTakesTable() {
+  const tbody = $("takesBody");
+  tbody.innerHTML = "";
 
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(img, 0, 0, width, height);
-  return canvas.toDataURL("image/jpeg", 0.9);
-}
+  const takes = currentProject.takes || [];
+  takes.forEach((t, idx) => {
+    const tr = document.createElement("tr");
+    tr.dataset.index = idx;
+    tr.draggable = true;
 
-function renderThumbnailsForTake(idx) {
-  const take = currentProject.takes[idx];
-  const container = $("thumbs-" + idx);
-  if (!container) return;
-  container.innerHTML = "";
-  if (!take.images) return;
-  take.images.slice(0, 4).forEach((src, i) => {
-    const img = document.createElement("img");
-    img.src = src;
-    img.alt = "Bild " + (i + 1);
-    img.addEventListener("click", () => openLightbox(src));
-    container.appendChild(img);
+    tr.innerHTML = `
+      <td data-col="take"><input type="text" data-field="take" data-index="${idx}" value="${t.take || (idx+1)}"></td>
+      <td data-col="tcIn"><input type="text" data-field="tcIn" data-index="${idx}" value="${t.tcIn || ""}" placeholder="00:00:00:00"></td>
+      <td data-col="tcOut"><input type="text" data-field="tcOut" data-index="${idx}" value="${t.tcOut || ""}" placeholder="00:00:00:00"></td>
+      <td data-col="camera"><textarea data-field="camera" data-index="${idx}">${t.camera || ""}</textarea></td>
+      <td data-col="speaker"><textarea data-field="speaker" data-index="${idx}">${t.speaker || ""}</textarea></td>
+      <td data-col="persons"><textarea data-field="persons" data-index="${idx}">${t.persons || ""}</textarea></td>
+      <td data-col="notes"><textarea data-field="notes" data-index="${idx}">${t.notes || ""}</textarea></td>
+      <td data-col="music"><textarea data-field="music" data-index="${idx}">${t.music || ""}</textarea></td>
+      <td data-col="source"><textarea data-field="source" data-index="${idx}">${t.source || ""}</textarea></td>
+      <td data-col="images"><div class="images-cell"><div class="images-thumbs"></div><span class="muted">kommt gleich</span></div></td>
+    `;
+
+    tr.addEventListener("click", (e) => {
+      if (["INPUT","TEXTAREA","LABEL"].includes(e.target.tagName)) return;
+      tr.classList.toggle("row-selected");
+    });
+
+    tbody.appendChild(tr);
   });
+
+  tbody.querySelectorAll('input[data-field], textarea[data-field]').forEach(el => {
+    el.addEventListener("input", () => {
+      const index = parseInt(el.dataset.index, 10);
+      const field = el.dataset.field;
+      const take = currentProject.takes[index];
+      if (!take) return;
+      take[field] = el.value;
+
+      const autoTc = $("chkAutoTc").checked;
+      if (autoTc && (field === "speaker" || field === "tcIn")) {
+        recalcTimecodes();
+        // DOM Update der In/Out Felder ohne Neu-Render:
+        currentProject.takes.forEach((tk, i) => {
+          const row = tbody.querySelector(`tr[data-index="${i}"]`);
+          if (!row) return;
+          const inInput  = row.querySelector('input[data-field="tcIn"]');
+          const outInput = row.querySelector('input[data-field="tcOut"]');
+          if (inInput)  inInput.value  = tk.tcIn  || "";
+          if (outInput) outInput.value = tk.tcOut || "";
+        });
+      }
+    });
+  });
+
+  applyColumnVisibilityFromToggles();
 }
 
-function openLightbox(src) {
-  $("lightboxImg").src = src;
-  $("lightbox").classList.remove("hidden");
+function addEmptyTake() {
+  const idx = currentProject.takes.length;
+  currentProject.takes.push({
+    take: String(idx+1),
+    tcIn: "",
+    tcOut: "",
+    camera: "",
+    speaker: "",
+    persons: "",
+    notes: "",
+    music: "",
+    source: ""
+  });
+  renderTakesTable();
+}
+
+function deleteSelectedTakes() {
+  const tbody = $("takesBody");
+  const rows = Array.from(tbody.querySelectorAll("tr.row-selected"));
+  if (!rows.length) return alert("Keine Takes ausgewählt.");
+  if (!confirm(`Wirklich ${rows.length} Take(s) löschen?`)) return;
+
+  const indices = rows.map(r => parseInt(r.dataset.index,10)).sort((a,b)=>b-a);
+  indices.forEach(i => currentProject.takes.splice(i,1));
+
+  if ($("chkAutoRenumber").checked) {
+    currentProject.takes.forEach((t, i) => t.take = String(i+1));
+  }
+  if ($("chkAutoTc").checked) recalcTimecodes();
+
+  renderTakesTable();
+}
+
+async function loadFromSupabase() {
+  projectId = getProjectIdFromUrl();
+  if (!projectId) { alert("Projekt-ID fehlt."); window.location.href="index.html"; return; }
+
+  await requireSessionOrBack();
+
+  const { data: proj, error: pErr } = await sb
+    .from("projects")
+    .select("id,title,meta,created_at")
+    .eq("id", projectId)
+    .single();
+
+  if (pErr || !proj) { alert("Projekt nicht gefunden."); window.location.href="index.html"; return; }
+
+  const meta = proj.meta || {};
+  $("peId").value = proj.id;
+  $("peTitle").value = proj.title || "";
+  $("peEditor").value = meta.editor || "";
+  $("peCvd").value    = meta.cvd || "";
+  $("peArea").value   = meta.area || "";
+  $("peShow").value   = meta.show || "";
+  $("peFormat").value = meta.format || "";
+  $("peShort").value  = meta.short || "";
+  $("projectNotes").value = meta.notes || "";
+
+  $("projTitle").textContent = proj.title || "Projekt";
+  $("projectHeaderTitle").textContent = proj.title || "";
+
+  const metaParts = [];
+  if (meta.show) metaParts.push(meta.show);
+  if (meta.format) metaParts.push(meta.format);
+  $("projSubtitle").textContent = metaParts.join(" · ");
+
+  const { data: rows, error: tErr } = await sb
+    .from("takes")
+    .select("*")
+    .eq("project_id", projectId)
+    .order("take_no", { ascending: true });
+
+  if (tErr) { alert(tErr.message); return; }
+
+  currentProject = {
+    id: proj.id,
+    title: proj.title,
+    takes: (rows || []).map(r => ({
+      take: String(r.take_no ?? ""),
+      tcIn: r.tc_in || "",
+      tcOut: r.tc_out || "",
+      camera: r.bild_kamera || "",
+      speaker: r.sprechertext || "",
+      persons: r.personen || "",
+      notes: r.notizen || "",
+      music: r.musik || "",
+      source: r.herkunft || ""
+    }))
+  };
+
+  renderTakesTable();
+}
+
+async function saveToSupabase() {
+  if (!projectId) return;
+
+  await requireSessionOrBack();
+
+  const title = $("peTitle").value.trim() || "Unbenannt";
+  const meta = {
+    editor: $("peEditor").value.trim(),
+    cvd: $("peCvd").value.trim(),
+    area: $("peArea").value.trim(),
+    show: $("peShow").value.trim(),
+    format: $("peFormat").value.trim(),
+    short: $("peShort").value.trim(),
+    notes: $("projectNotes").value || ""
+  };
+
+  const { error: pErr } = await sb
+    .from("projects")
+    .update({ title, meta })
+    .eq("id", projectId);
+
+  if (pErr) return alert(pErr.message);
+
+  await sb.from("takes").delete().eq("project_id", projectId);
+
+  const rows = (currentProject.takes || []).map((t, i) => ({
+    project_id: projectId,
+    take_no: parseInt(t.take || String(i+1), 10),
+    tc_in: t.tcIn || "",
+    tc_out: t.tcOut || "",
+    bild_kamera: t.camera || "",
+    sprechertext: t.speaker || "",
+    personen: t.persons || "",
+    notizen: t.notes || "",
+    musik: t.music || "",
+    herkunft: t.source || ""
+  }));
+
+  if (rows.length) {
+    const { error: tErr } = await sb.from("takes").insert(rows);
+    if (tErr) return alert(tErr.message);
+  }
+
+  alert("Projekt gespeichert (online).");
+}
+
+async function deleteProject() {
+  if (!projectId) return;
+  if (!confirm("Projekt wirklich löschen?")) return;
+
+  await requireSessionOrBack();
+
+  await sb.from("takes").delete().eq("project_id", projectId);
+  const { error } = await sb.from("projects").delete().eq("id", projectId);
+  if (error) return alert(error.message);
+
+  alert("Projekt gelöscht.");
+  window.location.href = "index.html";
+}
+
+// DOCX Import: nutzt deine alte Logik, mapt in currentProject.takes
+function parseDocxHtmlToTakes(html) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+
+  const tables = Array.from(doc.querySelectorAll("table"));
+  const takes = [];
+
+  if (tables.length) {
+    tables.forEach((table) => {
+      const rows = Array.from(table.rows || table.querySelectorAll("tr"));
+      if (!rows.length) return;
+
+      let sceneTitle = "";
+      const firstCellText = (rows[0].cells[0] && rows[0].cells[0].textContent || "").trim();
+      if (/TITEL:/i.test(firstCellText)) sceneTitle = firstCellText.replace(/TITEL:\s*/i, "").trim();
+
+      for (let ri = 1; ri < rows.length; ri++) {
+        const row = rows[ri];
+        if (!row.cells || row.cells.length < 2) continue;
+
+        const left  = (row.cells[0].textContent || "").trim();
+        const right = (row.cells[1].textContent || "").trim();
+        if (!left && !right) continue;
+
+        const combined = (left + " " + right).toLowerCase();
+        if (combined.match(/beschreibung|idee|sprechertext/)) continue;
+
+        takes.push({
+          take: String(takes.length + 1),
+          tcIn: "",
+          tcOut: "",
+          camera: left,
+          speaker: right,
+          persons: "",
+          notes: sceneTitle || "",
+          music: "",
+          source: ""
+        });
+      }
+    });
+    return takes;
+  }
+
+  const paras = doc.querySelectorAll("p");
+  paras.forEach(p => {
+    const text = p.textContent.trim();
+    if (!text) return;
+    takes.push({
+      take: String(takes.length + 1),
+      tcIn: "",
+      tcOut: "",
+      camera: "",
+      speaker: text,
+      persons: "",
+      notes: "",
+      music: "",
+      source: ""
+    });
+  });
+  return takes;
+}
+
+function handleDocxImport() {
+  const file = $("docxFile").files && $("docxFile").files[0];
+  if (!file) { $("docxInfo").textContent = "Bitte zuerst eine DOCX-Datei auswählen."; return; }
+
+  $("docxInfo").textContent = "DOCX wird verarbeitet …";
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const arrayBuffer = e.target.result;
+    mammoth.convertToHtml({ arrayBuffer }).then(result => {
+      const html = result.value || "";
+      const imported = parseDocxHtmlToTakes(html);
+      if (!imported.length) { $("docxInfo").textContent = "Nichts gefunden."; return; }
+
+      currentProject.takes = (currentProject.takes || []).concat(imported);
+
+      if ($("chkAutoRenumber").checked) currentProject.takes.forEach((t, i) => t.take = String(i + 1));
+      if ($("chkAutoTc").checked) recalcTimecodes();
+
+      renderTakesTable();
+      $("docxInfo").textContent = `${imported.length} Takes importiert.`;
+    }).catch(() => {
+      $("docxInfo").textContent = "Fehler beim Lesen der DOCX-Datei.";
+    });
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function setupEvents() {
+  $("btnSaveProject").addEventListener("click", saveToSupabase);
+  $("btnAddTake").addEventListener("click", addEmptyTake);
+  $("btnDeleteSelected").addEventListener("click", deleteSelectedTakes);
+  $("btnRecalcTc").addEventListener("click", () => { recalcTimecodes(); renderTakesTable(); });
+  $("btnExportPdf").addEventListener("click", exportCurrentViewToPdf);
+  $("btnImportDocx").addEventListener("click", handleDocxImport);
+  $("btnDeleteProject").addEventListener("click", deleteProject);
+
+  document.querySelectorAll("[data-col-toggle]").forEach(cb => cb.addEventListener("change", applyColumnVisibilityFromToggles));
 }
 
 function exportCurrentViewToPdf() {
+  // identisch zu deiner bisherigen PDF-Funktion (gekürzt: nutzt currentProject)
   const toggles = document.querySelectorAll("[data-col-toggle]");
-  const visibleCols = Array.from(toggles)
-    .filter(t => t.checked)
-    .map(t => t.getAttribute("data-col-toggle"));
+  const visibleCols = Array.from(toggles).filter(t => t.checked).map(t => t.getAttribute("data-col-toggle"));
 
   const labels = {
-    take: "Take",
-    tcIn: "In",
-    tcOut: "Out",
-    camera: "Bild/Kamera",
-    speaker: "Sprechertext",
-    persons: "Personen",
-    notes: "Notizen",
-    music: "Musik",
-    source: "Herkunft",
-    images: "Bilder"
+    take: "Take", tcIn:"In", tcOut:"Out", camera:"Bild/Kamera", speaker:"Sprechertext",
+    persons:"Personen", notes:"Notizen", music:"Musik", source:"Herkunft", images:"Bilder"
   };
 
-  const p = currentProject;
-  const takes = p.takes || [];
+  const p = { title: $("peTitle").value || "Storyboard", notes: $("projectNotes").value || "" };
+  const takes = currentProject.takes || [];
 
   const head = visibleCols.map(c => `<th>${labels[c] || c}</th>`).join("");
-
   const rows = takes.map(t => {
     const tds = visibleCols.map(c => {
-      if (c === "images") {
-        const count = (t.images || []).length;
-        return `<td>${count ? count + " Bild(er)" : ""}</td>`;
-      }
+      if (c === "images") return `<td></td>`;
       let v = "";
       if (c === "take") v = t.take || "";
       else if (c === "tcIn") v = t.tcIn || "";
@@ -869,117 +608,42 @@ function exportCurrentViewToPdf() {
     return `<tr>${tds}</tr>`;
   }).join("");
 
-  const tableHtml = `
-    <table>
-      <thead><tr>${head}</tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `;
-
+  const tableHtml = `<table><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table>`;
   const w = window.open("", "_blank");
-  const title = p.title || "Storyboard";
+  const title = p.title;
 
   w.document.write(`
-    <!DOCTYPE html>
-    <html lang="de">
-    <head>
-      <meta charset="UTF-8">
-      <title>${title}</title>
-      <style>
-        body {
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-          font-size: 11px;
-          margin: 20px;
-          color: #111827;
-        }
-        h1 { font-size: 18px; margin-bottom: 4px; }
-        h2 { font-size: 13px; margin-top: 12px; margin-bottom: 4px; }
-        table { border-collapse: collapse; width: 100%; font-size: 10px; }
-        th, td { border: 1px solid #9ca3af; padding: 3px 4px; vertical-align: top; }
-        th { background: #e5e7eb; }
-        .notes { font-size: 10px; margin-top: 8px; white-space: pre-wrap; }
-      </style>
-    </head>
-    <body>
+    <!DOCTYPE html><html lang="de"><head><meta charset="UTF-8">
+    <title>${title}</title>
+    <style>
+      body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:11px;margin:20px;color:#111827;}
+      h1{font-size:18px;margin-bottom:4px;}
+      table{border-collapse:collapse;width:100%;font-size:10px;}
+      th,td{border:1px solid #9ca3af;padding:3px 4px;vertical-align:top;}
+      th{background:#e5e7eb;}
+      .notes{font-size:10px;margin-top:8px;white-space:pre-wrap;}
+    </style></head><body>
       <h1>${title}</h1>
-      <div>${p.show || ""} ${p.format ? "· " + p.format : ""}</div>
       <h2>Takes</h2>
       ${tableHtml}
-      ${p.notes ? `<div class="notes"><strong>Projekt-Notizen:</strong><br>${String(p.notes).replace(/</g, "&lt;").replace(/\r?\n/g, "<br>")}</div>` : ""}
-    </body>
-    </html>
+      ${p.notes ? `<div class="notes"><strong>Projekt-Notizen:</strong><br>${String(p.notes).replace(/</g,"&lt;").replace(/\r?\n/g,"<br>")}</div>` : ""}
+    </body></html>
   `);
   w.document.close();
   w.focus();
   w.print();
 }
 
-// --------- Projekt löschen / archivieren ---------
-function deleteOrArchiveProject() {
-  if (!currentProject) return;
-  if (!confirm("Projekt ins Archiv verschieben und aus der aktiven Liste entfernen?")) return;
-
-  const all = loadProjectsForEditor();
-  const idx = all.findIndex(p => p.id === currentProject.id);
-  if (idx >= 0) {
-    const [proj] = all.splice(idx, 1);
-    proj.archivedAt = new Date().toISOString();
-    saveProjectsForEditor(all);
-    const archList = loadJSON(archiveKey, []);
-    archList.push(proj);
-    saveJSON(archiveKey, archList);
+document.addEventListener("DOMContentLoaded", async () => {
+  try {
+    await initSupabase();
+    setupEvents();
+    await loadFromSupabase();
+  } catch (e) {
+    console.error(e);
+    alert(String(e.message || e));
+    window.location.href = "index.html";
   }
-
-  localStorage.removeItem("sb_active_project");
-  alert("Projekt wurde ins Archiv verschoben.");
-  window.location.href = "index.html";
-}
-
-// --------- Events / Init ---------
-function setupEvents() {
-  const btnSave = $("btnSaveProject");
-  if (btnSave) btnSave.addEventListener("click", () => {
-    syncProjectMetaFromUi();
-    persistCurrentProject();
-    alert("Projekt gespeichert.");
-  });
-
-  const btnAdd = $("btnAddTake");
-  if (btnAdd) btnAdd.addEventListener("click", addEmptyTake);
-
-  const btnDelSel = $("btnDeleteSelected");
-  if (btnDelSel) btnDelSel.addEventListener("click", deleteSelectedTakes);
-
-  const btnTc = $("btnRecalcTc");
-  if (btnTc) btnTc.addEventListener("click", () => {
-    recalcTimecodes();
-    renderTakesTable();
-    persistCurrentProject();
-  });
-
-  const btnDocx = $("btnImportDocx");
-  if (btnDocx) btnDocx.addEventListener("click", handleDocxImport);
-
-  const btnPdf = $("btnExportPdf");
-  if (btnPdf) btnPdf.addEventListener("click", exportCurrentViewToPdf);
-
-  const btnDelProj = $("btnDeleteProject");
-  if (btnDelProj) btnDelProj.addEventListener("click", deleteOrArchiveProject);
-
-  document.querySelectorAll("[data-col-toggle]").forEach(cb => {
-    cb.addEventListener("change", applyColumnVisibilityFromToggles);
-  });
-
-  const lb = $("lightbox");
-  if (lb) lb.addEventListener("click", () => {
-    lb.classList.add("hidden");
-    $("lightboxImg").src = "";
-  });
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  initProjectFromStorage();
-  setupEvents();
 });
 </script>
 
