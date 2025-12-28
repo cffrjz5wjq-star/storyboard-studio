@@ -6,7 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="styles.css" />
 
-  <!-- WICHTIG: Scripts gehören NICHT in <style>, sondern hierhin -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script src="app.js?v=12" defer></script>
 
@@ -36,7 +35,6 @@
       flex-direction: column;
       gap: 0.25rem;
     }
-    /* … dein restliches CSS bleibt … */
   </style>
 </head>
 
@@ -57,7 +55,6 @@
         </div>
       </header>
 
-      <!-- Login / Registrierung -->
       <main id="authView" class="project-main">
         <section class="card auth-card">
           <div class="card-header">
@@ -68,7 +65,7 @@
           </div>
 
           <p class="hint" style="margin-top:0.2rem;">
-            Bitte trage hier deine <b>eigene</b> E-Mail-Adresse ein. Du bekommst ggf. eine Bestätigungs-Mail (je nach Supabase-Einstellung).
+            Bitte trage hier deine <b>eigene</b> E-Mail-Adresse ein.
           </p>
 
           <div class="field">
@@ -85,14 +82,9 @@
             <button id="btnLogin" type="button" class="primary">Einloggen</button>
             <button id="btnRegister" type="button" class="secondary">Registrieren</button>
           </div>
-
-          <p class="hint" style="margin-top:0.7rem;">
-            Hinweis: Falls nach „Registrieren“ nichts passiert, liegt es fast immer an fehlendem Supabase-Mail-Setup oder einer blockierten Anfrage (Console prüfen).
-          </p>
         </section>
       </main>
 
-      <!-- Dashboard -->
       <main id="dashboardView" class="dashboard-main hidden">
         <section class="card">
           <div class="card-header">
@@ -107,30 +99,9 @@
             <div class="dashboard-tile">
               <div class="dashboard-tile-title">Neues Projekt anlegen</div>
               <div class="dashboard-tile-text">
-                Titel, Redaktion, Sendung und Format festlegen. Das Projekt erscheint anschließend in der Liste rechts.
+                Titel, Redaktion, Sendung und Format festlegen.
               </div>
               <button type="button" class="small" id="btnNewProjectTile">Projekt erstellen</button>
-            </div>
-            <div class="dashboard-tile">
-              <div class="dashboard-tile-title">Projekt öffnen</div>
-              <div class="dashboard-tile-text">
-                Wähle ein bestehendes Projekt aus der Liste und öffne es im Storyboard-Editor.
-              </div>
-              <span class="hint">Nutze die Buttons in der Projektliste.</span>
-            </div>
-            <div class="dashboard-tile">
-              <div class="dashboard-tile-title">Mitarbeitende einladen</div>
-              <div class="dashboard-tile-text">
-                Geplant: Weitere Nutzerinnen und Nutzer mit Lese- oder Schreibrechten einladen.
-              </div>
-              <span class="hint">Coming soon</span>
-            </div>
-            <div class="dashboard-tile">
-              <div class="dashboard-tile-title">Einstellungen &amp; Logos</div>
-              <div class="dashboard-tile-text">
-                Senderlogos, Farbwelten und Standardformate für zukünftige Produktionen verwalten.
-              </div>
-              <span class="hint">Platzhalter – wird später ausgebaut.</span>
             </div>
           </div>
 
